@@ -1,7 +1,21 @@
-# Dependencies (only used locally for visual testing)
+# Dependencies
 node_modules/
-package.json
-package-lock.json
+
+# Environment / secrets
+.env
+
+# Runtime data (generated locally; not source)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+var/logs/*
+var/mail/*
+uploads/products/*
+
+# Keep folder placeholders
+!var/logs/.gitkeep
+!var/mail/.gitkeep
+!uploads/products/.gitkeep
 
 # OS / editor
 .DS_Store
