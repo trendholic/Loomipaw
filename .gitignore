@@ -1,0 +1,11 @@
+# Dependencies (only used locally for visual testing)
+node_modules/
+package.json
+package-lock.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
