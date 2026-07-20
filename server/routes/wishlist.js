@@ -13,7 +13,7 @@ router.use(requireAuth); // wishlist is tied to an account
 router.get('/', asyncHandler(async (req, res) => {
   const rows = db.prepare(`SELECT p.* FROM wishlist_items w JOIN products p ON p.id = w.product_id
                            WHERE w.user_id = ? ORDER BY w.created_at DESC`).all(req.user.id);
-  res.json({ items: rows.map((p) => catalog.serialize(p)) });
+  res.json({ items: catalog.serializeMany(rows) });
 }));
 
 router.post('/', validate({ body: z.object({ productId: z.coerce.number().int().positive() }) }),

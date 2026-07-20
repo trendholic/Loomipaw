@@ -30,20 +30,28 @@ const DEFAULTS = {
   },
 };
 
+// In-process cache — settings change rarely but are read on nearly every
+// request (cart pricing, storefront bootstrap). Invalidated on write.
+const cache = new Map();
+
 function get(key) {
+  if (cache.has(key)) return cache.get(key);
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  if (row) {
-    try { return JSON.parse(row.value); } catch { return DEFAULTS[key]; }
-  }
-  return DEFAULTS[key];
+  let value = DEFAULTS[key];
+  if (row) { try { value = JSON.parse(row.value); } catch { value = DEFAULTS[key]; } }
+  cache.set(key, value);
+  return value;
 }
 
 function set(key, value) {
   db.prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
               ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`)
     .run(key, JSON.stringify(value));
+  cache.set(key, value);
   return value;
 }
+
+function invalidate() { cache.clear(); }
 
 function all() {
   return {
@@ -54,4 +62,4 @@ function all() {
   };
 }
 
-module.exports = { get, set, all, DEFAULTS };
+module.exports = { get, set, all, invalidate, DEFAULTS };

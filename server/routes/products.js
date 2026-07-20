@@ -51,7 +51,7 @@ router.get('/',
       .all({ ...params, limit, offset: (page - 1) * limit });
 
     res.json({
-      products: rows.map((p) => catalog.serialize(p)),
+      products: catalog.serializeMany(rows),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   }));
@@ -78,7 +78,7 @@ router.get('/:slug', asyncHandler(async (req, res) => {
 
   res.json({
     product: data,
-    related: related.map((p) => catalog.serialize(p)),
+    related: catalog.serializeMany(related),
     reviews,
     reviewSummary: { average: product.rating_avg, count: product.rating_count, distribution },
   });

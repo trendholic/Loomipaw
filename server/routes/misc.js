@@ -29,7 +29,7 @@ router.get('/search',
     const rows = db.prepare(`SELECT * FROM products WHERE status='active' AND (title LIKE @q OR subtitle LIKE @q OR description LIKE @q)
                              ORDER BY best_seller DESC, rating_avg DESC LIMIT @limit`)
       .all({ q: `%${q}%`, limit: limit || 8 });
-    res.json({ query: q, results: rows.map((p) => catalog.serialize(p)) });
+    res.json({ query: q, results: catalog.serializeMany(rows) });
   }));
 
 // --- Public store settings (safe subset) ---

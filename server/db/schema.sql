@@ -13,15 +13,48 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash  TEXT NOT NULL,
   name           TEXT NOT NULL DEFAULT '',
   phone          TEXT NOT NULL DEFAULT '',
-  role           TEXT NOT NULL DEFAULT 'customer',      -- customer | admin
+  role           TEXT NOT NULL DEFAULT 'customer',      -- customer | staff | admin
   address_json   TEXT NOT NULL DEFAULT '{}',            -- default shipping address
   reset_token    TEXT,
   reset_expires  TEXT,
+  token_version  INTEGER NOT NULL DEFAULT 0,            -- bump to invalidate all sessions
+  failed_logins  INTEGER NOT NULL DEFAULT 0,            -- consecutive failed attempts
+  locked_until   TEXT,                                  -- account lockout expiry (ISO)
+  last_login_at  TEXT,
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_reset ON users(reset_token);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+-- ------------------------------------------------------- Audit log
+-- Immutable trail of security- and business-significant actions.
+CREATE TABLE IF NOT EXISTS audit_log (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor_id    INTEGER,                       -- user id or NULL (system/guest)
+  actor_email TEXT NOT NULL DEFAULT '',
+  action      TEXT NOT NULL,                 -- e.g. auth.login, product.update
+  entity      TEXT NOT NULL DEFAULT '',      -- e.g. product:12, order:LP-XXXX
+  ip          TEXT NOT NULL DEFAULT '',
+  user_agent  TEXT NOT NULL DEFAULT '',
+  meta_json   TEXT NOT NULL DEFAULT '{}',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_log(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
+
+-- --------------------------------------------------- Login attempts
+-- Per-identifier (email/ip) attempt tracking for brute-force defence.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  identifier  TEXT NOT NULL,                 -- email or ip
+  success     INTEGER NOT NULL DEFAULT 0,
+  ip          TEXT NOT NULL DEFAULT '',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_login_attempts ON login_attempts(identifier, created_at);
 
 -- ----------------------------------------------------------- Categories
 CREATE TABLE IF NOT EXISTS categories (
@@ -237,3 +270,12 @@ CREATE TABLE IF NOT EXISTS settings (
   value       TEXT NOT NULL DEFAULT '',   -- JSON
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ------------------------------------------------- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_products_sort ON products(status, best_seller, featured, position);
+CREATE INDEX IF NOT EXISTS idx_products_price ON products(status, price_cents);
+CREATE INDEX IF NOT EXISTS idx_reviews_prod_status ON reviews(product_id, status);
+CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_variants_stock ON variants(stock);
+CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist_items(user_id);
