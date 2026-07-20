@@ -22,19 +22,47 @@ function createApp() {
   // --- Response compression (gzip/brotli-aware) ---
   app.use(compression({ threshold: 1024 }));
 
+  // --- Content-Security-Policy source lists ---
+  // Base policy is strict ('self' only). Analytics vendor hosts are added
+  // ONLY for the tags that are actually configured, so a store that uses no
+  // analytics keeps a locked-down CSP.
+  const a = config.analytics || {};
+  const scriptHosts = [], connectHosts = [], imgHosts = [], frameHosts = [];
+  if (a.ga4) {
+    scriptHosts.push('https://www.googletagmanager.com', 'https://www.google-analytics.com');
+    connectHosts.push('https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://www.googletagmanager.com');
+    imgHosts.push('https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://www.googletagmanager.com');
+  }
+  if (a.metaPixel) {
+    scriptHosts.push('https://connect.facebook.net');
+    connectHosts.push('https://www.facebook.com');
+    imgHosts.push('https://www.facebook.com', 'https://*.facebook.com');
+    frameHosts.push('https://www.facebook.com');
+  }
+  if (a.tiktokPixel) {
+    scriptHosts.push('https://analytics.tiktok.com');
+    connectHosts.push('https://analytics.tiktok.com', 'https://*.tiktokcdn.com');
+    imgHosts.push('https://analytics.tiktok.com');
+  }
+  if (a.clarity) {
+    scriptHosts.push('https://www.clarity.ms', 'https://c.clarity.ms');
+    connectHosts.push('https://*.clarity.ms', 'https://c.bing.com');
+    imgHosts.push('https://*.clarity.ms', 'https://c.bing.com');
+  }
+
   // --- Security headers ---
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         baseUri: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", ...scriptHosts],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-        imgSrc: ["'self'", 'data:', 'blob:'],
-        connectSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'blob:', ...imgHosts],
+        connectSrc: ["'self'", ...connectHosts],
         objectSrc: ["'none'"],
-        frameSrc: ["'none'"],
+        frameSrc: frameHosts.length ? frameHosts : ["'none'"],
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
         manifestSrc: ["'self'"],
@@ -106,8 +134,9 @@ function createApp() {
   api.use('/admin', require('./routes/admin'));
   app.use('/api', api);
 
-  // --- Server-rendered SEO meta for product pages (crawler-friendly) ---
+  // --- Server-rendered SEO meta for product + collection pages (crawler-friendly) ---
   app.get('/product.html', seo.productMeta);
+  app.get('/collection.html', seo.collectionMeta);
 
   // --- Static assets ---
   // Uploaded, content-addressed images are safe to cache aggressively.

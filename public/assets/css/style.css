@@ -1395,3 +1395,33 @@ h3 { font-size: var(--fs-h3); }
 input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] { border-color: #a33 !important; box-shadow: 0 0 0 3px rgba(163,51,51,.12) !important; }
 .nav__link[aria-current="page"] { font-weight: 600; }
 .nav__link[aria-current="page"]::after { transform: scaleX(1); }
+
+/* =====================================================================
+   Conversion: free-shipping progress meter + trust rows
+   (added in the conversion-optimization pass)
+   ===================================================================== */
+.ship-progress { margin-bottom: .9rem; }
+.ship-progress__msg { font-size: .82rem; color: var(--ink-2); margin-bottom: .5rem; }
+.ship-progress__msg b { color: var(--espresso); }
+.ship-progress__track {
+  height: 7px; border-radius: 999px; background: var(--sand);
+  overflow: hidden;
+}
+.ship-progress__fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--clay), #C6A15B);
+  transition: width .45s cubic-bezier(.4,0,.2,1);
+}
+.ship-progress.is-unlocked .ship-progress__fill { background: #5E8C61; }
+
+.trust-row {
+  display: flex; flex-wrap: wrap; gap: .5rem 1.1rem;
+  margin-top: 1rem; font-size: .78rem; color: var(--ink-2);
+}
+.trust-row span { display: inline-flex; align-items: center; gap: .4rem; }
+.trust-row svg { width: 16px; height: 16px; stroke: var(--clay); flex: 0 0 auto; }
+.trust-row--checkout { justify-content: space-between; border-top: 1px solid var(--line); padding-top: 1rem; }
+.trust-row--sm { font-size: .74rem; margin-top: .7rem; gap: .4rem 1rem; }
+@media (max-width: 560px) {
+  .trust-row--checkout { flex-direction: column; gap: .55rem; }
+}

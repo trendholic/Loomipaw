@@ -152,9 +152,15 @@
     if ($('[data-cart-subtotal]')) $('[data-cart-subtotal]').textContent = money(cart.subtotalCents);
     const ship = $('[data-cart-ship]');
     if (ship && cart.shipping) {
-      ship.innerHTML = cart.shipping.qualifiesFree
+      const thr = (state.settings && state.settings.shipping && state.settings.shipping.freeThresholdCents) || 7500;
+      const pct = cart.shipping.qualifiesFree ? 100 : Math.max(4, Math.min(100, Math.round((cart.subtotalCents / thr) * 100)));
+      const msg = cart.shipping.qualifiesFree
         ? "🎉 You've unlocked <b>free carbon-neutral shipping!</b>"
-        : `Add <b>${money(cart.shipping.remainingForFreeCents)}</b> more for free shipping.`;
+        : `You're <b>${money(cart.shipping.remainingForFreeCents)}</b> away from <b>free shipping</b>`;
+      ship.innerHTML = `<div class="ship-progress ${cart.shipping.qualifiesFree ? 'is-unlocked' : ''}">
+        <div class="ship-progress__msg">${msg}</div>
+        <div class="ship-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div class="ship-progress__fill" style="width:${pct}%"></div></div>
+      </div>`;
     }
     if (foot) foot.hidden = false;
   }
@@ -168,6 +174,8 @@
     try {
       const c = await API.addToCart(variantId, qty);
       state.cart = c.cart; renderCart(); updateBadges();
+      const line = (state.cart.items || []).find((i) => i.variantId === Number(variantId));
+      if (line) track('add_to_cart', { value: line.unitPriceCents * qty, items: [{ id: line.productSlug || line.variantId, name: line.title, price: line.unitPriceCents, qty }] });
       toast(opts.label ? `${opts.label} added to cart` : 'Added to cart');
       if (opts.open !== false) openCart();
     } catch (e) { toast(e.message, 'error'); }
@@ -449,6 +457,40 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Analytics event dispatch (GA4 / Meta / TikTok)                      */
+  /* Vendor libraries are loaded by analytics.js; this just forwards a   */
+  /* canonical event to whichever globals exist. Safe no-op otherwise.   */
+  /* ------------------------------------------------------------------ */
+  const FB_MAP = { view_item: 'ViewContent', add_to_cart: 'AddToCart', begin_checkout: 'InitiateCheckout', purchase: 'Purchase' };
+  const TT_MAP = { view_item: 'ViewContent', add_to_cart: 'AddToCart', begin_checkout: 'InitiateCheckout', purchase: 'CompletePayment' };
+  function track(event, data = {}) {
+    try {
+      const currency = data.currency || state.currency || 'USD';
+      const value = typeof data.value === 'number' ? Number((data.value / 100).toFixed(2)) : undefined;
+      const items = (data.items || []).map((i) => ({ item_id: String(i.id), item_name: i.name, price: i.price != null ? Number((i.price / 100).toFixed(2)) : undefined, quantity: i.qty || 1 }));
+      // GA4
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', event, { currency, value, items, ...(data.transactionId ? { transaction_id: data.transactionId } : {}) });
+      }
+      // Meta Pixel
+      if (typeof window.fbq === 'function' && FB_MAP[event]) {
+        window.fbq('track', FB_MAP[event], {
+          content_type: 'product', currency, value,
+          content_ids: items.map((i) => i.item_id),
+          contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity, item_price: i.price })),
+        });
+      }
+      // TikTok Pixel
+      if (window.ttq && typeof window.ttq.track === 'function' && TT_MAP[event]) {
+        window.ttq.track(TT_MAP[event], {
+          value, currency,
+          contents: items.map((i) => ({ content_id: i.item_id, content_name: i.item_name, price: i.price, quantity: i.quantity, content_type: 'product' })),
+        });
+      }
+    } catch (_) { /* analytics must never break the store */ }
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
   /* ------------------------------------------------------------------ */
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -461,7 +503,7 @@
     state, money, toast, openCart, closeCart, refreshCart, addToCart, setCartQty, removeCartItem, toggleWishlist,
     productCard, mountProducts, stars, syncWishButtons, updateBadges, initReveal, escapeHtml, escapeAttr,
     isAuthed: () => !!state.user, renderHeader, api: API,
-    openSearch, toggleCompare, openCompare, compareIds, share,
+    openSearch, toggleCompare, openCompare, compareIds, share, track,
   };
 
   document.addEventListener('DOMContentLoaded', () => {

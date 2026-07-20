@@ -18,10 +18,14 @@
   const params = new URLSearchParams(location.search);
   if (params.get('category')) activeFilter = params.get('category');
 
+  let categories = [];
+  const heroTitle = document.querySelector('.page-hero h1');
+  const heroDesc = document.querySelector('.page-hero p:not(.breadcrumb):not(.eyebrow)');
+
   async function loadCategories() {
     if (!filterWrap) return;
     try {
-      const { categories } = await API.categories();
+      categories = (await API.categories()).categories || [];
       filterWrap.innerHTML = ['<button class="filter-chip" data-filter="all">All</button>']
         .concat(categories.map((c) => `<button class="filter-chip" data-filter="${c.slug}">${Loom.escapeHtml(c.name)}</button>`)).join('');
       setActive();
@@ -29,6 +33,21 @@
   }
   function setActive() {
     filterWrap && filterWrap.querySelectorAll('.filter-chip').forEach((b) => b.setAttribute('aria-pressed', b.getAttribute('data-filter') === activeFilter ? 'true' : 'false'));
+    updateIntro();
+  }
+  // Reflect the active category in the visible hero + document title (UX;
+  // crawlers already get server-rendered <title>/<meta> from seo.js).
+  function updateIntro() {
+    const cat = categories.find((c) => c.slug === activeFilter);
+    if (cat) {
+      if (heroTitle) heroTitle.textContent = cat.name;
+      if (heroDesc && cat.description) heroDesc.textContent = cat.description;
+      document.title = `${cat.name} — Loomipaw`;
+    } else {
+      if (heroTitle) heroTitle.textContent = 'Essentials, elevated.';
+      if (heroDesc) heroDesc.textContent = 'Every piece is designed in-house, comfort-tested by real dogs, and made to last. Filter by what your best friend needs today.';
+      document.title = 'Shop All — Loomipaw';
+    }
   }
 
   function queryString() {

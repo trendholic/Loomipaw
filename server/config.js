@@ -65,6 +65,15 @@ const config = {
     email: process.env.ADMIN_EMAIL || 'admin@loomipaw.com',
     password: process.env.ADMIN_PASSWORD || 'Admin123!change',
   },
+
+  // Marketing / analytics tags. All optional — empty means "not installed",
+  // and the loader simply skips it (no vendor script, no CSP relaxation).
+  analytics: {
+    ga4: (process.env.GA4_MEASUREMENT_ID || '').trim(),          // e.g. G-XXXXXXXXXX
+    metaPixel: (process.env.META_PIXEL_ID || '').trim(),         // e.g. 1234567890
+    tiktokPixel: (process.env.TIKTOK_PIXEL_ID || '').trim(),     // e.g. C9XXXXXXXXXXXXXXXX
+    clarity: (process.env.CLARITY_PROJECT_ID || '').trim(),      // e.g. abcdef1234
+  },
 };
 
 module.exports = config;

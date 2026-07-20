@@ -21,6 +21,7 @@
     }
     method = cart.shipping.methodId;
     render();
+    Loom.track('begin_checkout', { value: cart.subtotalCents, items: (cart.items || []).map((l) => ({ id: l.productSlug || l.variantId, name: l.title, price: l.unitPriceCents, qty: l.qty })) });
   }
 
   function render() {
@@ -54,6 +55,11 @@
             ${settings.payments.provider === 'dev' ? `<div class="test-cards"><strong>Test mode.</strong> Use <code>4242 4242 4242 4242</code> for success · <code>4000 0000 0000 0002</code> for a declined card. No real charges are made.</div>` : ''}
           </div>
           <button class="btn btn--block" type="submit" data-place>Place order — <span data-place-total>${money(cart.totalCents)}</span></button>
+          <div class="trust-row trust-row--checkout">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> SSL-encrypted &amp; secure</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg> 30-day happiness guarantee</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 7h13v10H3z"/><path d="M16 10h4l1 3v4h-5"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg> Free carbon-neutral shipping over $75</span>
+          </div>
         </form>
         <aside class="summary" data-summary>${summaryHtml()}</aside>
       </div>`;

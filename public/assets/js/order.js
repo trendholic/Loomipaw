@@ -21,6 +21,7 @@
     try {
       const { order } = await API.order(number, email);
       detail.innerHTML = orderHtml(order, placed);
+      if (placed) firePurchase(order);
     } catch (e) {
       detail.innerHTML = e.status === 403
         ? `<div class="auth-card"><h1>Verify it’s you</h1><p class="sub">Enter the email used for order ${Loom.escapeHtml(number)}.</p><form data-verify><div class="field"><input name="email" type="email" placeholder="you@example.com" required></div><button class="btn btn--block">View order</button></form></div>`
@@ -62,6 +63,21 @@
       try { const { order } = await API.order(fd.get('number').trim(), fd.get('email').trim()); result.innerHTML = orderHtml(order, false); }
       catch (err) { result.innerHTML = `<div class="alert alert--error">${Loom.escapeHtml(err.message === 'Order not found' ? 'We couldn’t find that order. Check the number and email.' : err.message)}</div>`; }
     });
+  }
+
+  // Fire the purchase conversion once per order (guard against refresh replays).
+  function firePurchase(o) {
+    try {
+      const key = 'lp_purchase_' + o.number;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      Loom.track('purchase', {
+        transactionId: o.number,
+        value: o.total_cents,
+        currency: o.currency,
+        items: (o.items || []).map((i) => ({ id: i.sku || i.title, name: i.title, price: i.unit_price_cents, qty: i.qty })),
+      });
+    } catch (_) {}
   }
 
   function notFound(msg) { return `<div style="text-align:center;padding:4rem 0"><h1>Order not found</h1><p style="color:var(--ink-2);margin:1rem 0 2rem">${Loom.escapeHtml(msg || '')}</p><a class="btn" href="/">Home</a></div>`; }

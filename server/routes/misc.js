@@ -8,6 +8,7 @@ const { validate } = require('../middleware/validate');
 const { writeLimiter } = require('../middleware/rateLimit');
 const catalog = require('../services/catalog');
 const settings = require('../services/settings');
+const config = require('../config');
 const mailer = require('../lib/mailer');
 const logger = require('../lib/logger');
 
@@ -40,6 +41,7 @@ router.get('/settings', asyncHandler(async (req, res) => {
     shipping: { freeThresholdCents: s.shipping.freeThresholdCents, methods: s.shipping.methods },
     tax: { ratePercent: s.tax.ratePercent, includedInPrice: s.tax.includedInPrice },
     payments: { provider: s.payments.provider },
+    analytics: config.analytics,
     csrfToken: req.csrfToken,
   });
 }));

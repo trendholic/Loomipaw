@@ -113,4 +113,71 @@ function productMeta(req, res, next) {
   res.type('html').set('Cache-Control', 'public, max-age=300').send(html);
 }
 
-module.exports = { router, productMeta };
+// --- Collection page meta injection (category-aware) ---
+let collectionTemplate = null;
+function collectionHtml() {
+  if (collectionTemplate === null || !config.isProd) {
+    try { collectionTemplate = fs.readFileSync(`${config.paths.public}/collection.html`, 'utf8'); } catch { collectionTemplate = ''; }
+  }
+  return collectionTemplate;
+}
+
+function collectionMeta(req, res, next) {
+  let html = collectionHtml();
+  if (!html) return next();
+
+  const slug = (req.query.category || '').trim();
+  let cat = null;
+  if (slug) cat = db.prepare('SELECT slug, name, description FROM categories WHERE slug = ?').get(slug);
+
+  const path = cat ? `/collection.html?category=${encodeURIComponent(cat.slug)}` : '/collection.html';
+  const url = abs(path);
+  const title = cat ? `${cat.name} — Loomipaw` : 'Shop All — Loomipaw';
+  const desc = (cat && cat.description)
+    ? cat.description
+    : 'Explore the full Loomipaw collection — premium apparel, walking essentials, luxury accessories and beds designed for every breed.';
+
+  // Up to 12 in-category products for an ItemList (helps rich results).
+  const rows = cat
+    ? db.prepare("SELECT slug, title FROM products WHERE status='active' AND category_id=(SELECT id FROM categories WHERE slug=?) ORDER BY best_seller DESC, rating_avg DESC LIMIT 12").all(cat.slug)
+    : db.prepare("SELECT slug, title FROM products WHERE status='active' ORDER BY best_seller DESC, rating_avg DESC LIMIT 12").all();
+
+  const itemList = {
+    '@context': 'https://schema.org', '@type': 'ItemList',
+    name: title, url,
+    itemListElement: rows.map((p, i) => ({
+      '@type': 'ListItem', position: i + 1,
+      url: abs('/product.html?slug=' + encodeURIComponent(p.slug)), name: p.title,
+    })),
+  };
+  const breadcrumb = {
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: 'Shop', item: abs('/collection.html') },
+      ...(cat ? [{ '@type': 'ListItem', position: 3, name: cat.name, item: url }] : []),
+    ],
+  };
+
+  const head = `
+  <title>${htmlEscape(title)}</title>
+  <meta name="description" content="${htmlEscape(desc)}" />
+  <link rel="canonical" href="${htmlEscape(url)}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${htmlEscape(title)}" />
+  <meta property="og:description" content="${htmlEscape(desc)}" />
+  <meta property="og:image" content="${htmlEscape(abs('/assets/img/hero.webp'))}" />
+  <meta property="og:url" content="${htmlEscape(url)}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">${JSON.stringify(itemList)}</script>
+  <script type="application/ld+json">${JSON.stringify(breadcrumb)}</script>
+`;
+
+  html = html
+    .replace(/<title>[\s\S]*?<\/title>/, '')
+    .replace(/<meta name="description"[^>]*>\s*/i, '')
+    .replace('</head>', head + '</head>');
+  res.type('html').set('Cache-Control', 'public, max-age=300').send(html);
+}
+
+module.exports = { router, productMeta, collectionMeta };

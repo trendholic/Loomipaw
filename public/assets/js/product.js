@@ -120,6 +120,7 @@
     renderRecent();
     wireStickyBar();
     Loom.initReveal();
+    Loom.track('view_item', { value: product.priceCents, items: [{ id: product.slug, name: product.title, price: product.priceCents, qty: 1 }] });
   }
 
   function wireGallery() {
