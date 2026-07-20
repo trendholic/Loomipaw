@@ -2,7 +2,7 @@
   "name": "loomipaw",
   "version": "1.0.0",
   "private": true,
-  "description": "Loomipaw — standalone premium pet lifestyle eCommerce platform (Node.js + Express + SQLite).",
+  "description": "Loomipaw \u2014 standalone premium pet lifestyle eCommerce platform (Node.js + Express + SQLite).",
   "type": "commonjs",
   "main": "server/index.js",
   "scripts": {
@@ -11,7 +11,10 @@
     "migrate": "node server/db/migrate.js",
     "seed": "node server/db/seed.js",
     "setup": "node server/db/migrate.js && node server/db/seed.js",
-    "test:api": "node server/test/e2e.js"
+    "test:api": "node server/test/e2e.js",
+    "test": "node --test server/test/unit.test.js server/test/security.test.js",
+    "test:unit": "node --test server/test/unit.test.js",
+    "test:security": "node --test server/test/security.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

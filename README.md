@@ -189,6 +189,19 @@ updates) render to `var/mail/*.eml` so you can inspect them.
 | `npm run migrate` | Create/upgrade the database schema |
 | `npm run seed` | Seed catalogue, admin, coupons, reviews |
 | `npm run setup` | migrate + seed |
-| `npm run test:api` | Run the end-to-end API test |
+| `npm test` | Unit + in-process security tests (no server needed) |
+| `npm run test:unit` | Pure-logic unit tests |
+| `npm run test:security` | Security/integration tests (headers, CSRF, lockout, authz, SEO, SQLi) |
+| `npm run test:api` | End-to-end API test (requires a running server) |
+
+## ✦ Enterprise features & hardening
+
+This build has been through a full enterprise-hardening pass — audit logging,
+brute-force lockout, session invalidation, upload sanitization, tightened CSP &
+security headers, gzip + caching, N+1 elimination, server-rendered SEO
+(sitemap, robots, JSON-LD), an analytics/activity/CSV/bulk admin, product
+compare, autocomplete search, infinite scroll, WCAG 2.2 AA accessibility, and
+retry/error-boundary reliability. See **[`PRODUCTION_REPORT.md`](PRODUCTION_REPORT.md)**
+for the complete audit, every change, and the production checklist.
 
 © 2026 Loomipaw. Crafted with love for good dogs everywhere.
