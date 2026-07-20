@@ -55,6 +55,7 @@
           <div class="pdp__info">
             <p class="pdp__cat">${esc(product.categoryName || '')}</p>
             <h1 class="pdp__title">${esc(product.title)}</h1>
+            ${product.subtitle ? `<p class="pdp__subtitle">${esc(product.subtitle)}</p>` : ''}
             <div class="pdp__meta">
               <span class="stars" aria-hidden="true">${Loom.stars(product.rating)}</span>
               <a href="#reviews">${product.rating ? product.rating.toFixed(1) : '—'} · ${(product.reviews || 0).toLocaleString()} reviews</a>
@@ -86,6 +87,14 @@
               <button class="btn" data-buy>Add to Cart — <span data-buy-price>${money(product.priceCents)}</span></button>
             </div>
 
+            <div class="pdp__assurance">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 7h13v10H3z"/><path d="M16 10h4l1 3v4h-5"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg> Order today, ships in 1–2 days</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Secure checkout</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v6h6"/></svg> Free 30-day returns</span>
+            </div>
+
+            <div class="fbt" data-fbt hidden></div>
+
             <div class="pdp__wish-line" role="button" tabindex="0" data-wish="${product.id}">
               <svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M12 20s-7-4.5-9.5-9C.5 7 3 3.5 6.5 3.5 9 3.5 12 6 12 6s3-2.5 5.5-2.5C21 3.5 23.5 7 21.5 11 19 15.5 12 20 12 20z"/></svg>
               <span data-wish-label>Save to wishlist</span>
@@ -105,6 +114,7 @@
               <div class="accordion__item"><button class="accordion__btn" aria-expanded="false"><span>Details &amp; Materials</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button><div class="accordion__panel"><div class="accordion__panel-inner">${esc(product.details || '')}</div></div></div>
               <div class="accordion__item"><button class="accordion__btn" aria-expanded="false"><span>Sizing &amp; Fit</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button><div class="accordion__panel"><div class="accordion__panel-inner">Measure your dog’s chest at its widest point and neck circumference. Between sizes? We recommend sizing up.</div></div></div>
               <div class="accordion__item"><button class="accordion__btn" aria-expanded="false"><span>Shipping &amp; Returns</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button><div class="accordion__panel"><div class="accordion__panel-inner">Ships within 1–2 business days. Complimentary carbon-neutral shipping over $75. 30-day happiness guarantee with free returns.</div></div></div>
+              <div class="accordion__item"><button class="accordion__btn" aria-expanded="false"><span>Frequently asked questions</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button><div class="accordion__panel"><div class="accordion__panel-inner">${faqHtml()}</div></div></div>
             </div>
           </div>
         </div>
@@ -119,8 +129,81 @@
     renderRelated(data.related);
     renderRecent();
     wireStickyBar();
+    renderFBT();
     Loom.initReveal();
     Loom.track('view_item', { value: product.priceCents, items: [{ id: product.slug, name: product.title, price: product.priceCents, qty: 1 }] });
+  }
+
+  // Honest, product-agnostic FAQ (mirrors the FAQPage JSON-LD injected
+  // server-side by seo.js so answers stay consistent for crawlers).
+  function faqHtml() {
+    const qas = [
+      ['How do I choose the right size?', 'Measure your dog’s chest at its widest point and neck circumference, then match our size chart. Between sizes? We recommend sizing up. Free 30-day returns make exchanges easy.'],
+      ['When will my order arrive?', 'Orders ship within 1–2 business days. Shipping is complimentary and carbon-neutral on orders over $75.'],
+      ['What if it doesn’t fit or my dog doesn’t love it?', 'You’re covered by our 30-day happiness guarantee — return it for a full refund or exchange, no questions asked.'],
+      ['Are the materials safe for my dog?', 'Yes. We use OEKO-TEX® certified fabrics and hardware, tested to be safe on skin and gentle on the planet.'],
+    ];
+    return `<dl class="faq">${qas.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a)}</dd>`).join('')}</dl>`;
+  }
+
+  /* Frequently bought together — complementary picks from other categories.
+     Pure AOV nudge: no bundle pricing engine, just an easy multi-add. */
+  const COMPLEMENT = {
+    apparel: ['accessories', 'walking'],
+    walking: ['accessories', 'apparel'],
+    accessories: ['walking', 'apparel'],
+    beds: ['accessories', 'beds'],
+    matching: ['accessories', 'apparel'],
+  };
+  let fbtItems = [];
+  async function renderFBT() {
+    const el = $('[data-fbt]'); if (!el) return;
+    const cats = COMPLEMENT[product.category] || ['accessories'];
+    try {
+      const pools = await Promise.all(cats.map((c) => API.products(`category=${encodeURIComponent(c)}&sort=reviews&limit=6`).then((r) => r.products).catch(() => [])));
+      const seen = new Set([product.slug]);
+      const picks = [];
+      for (const pool of pools) {
+        for (const p of pool) {
+          if (picks.length >= 2) break;
+          const v = (p.variants || []).find((x) => x.inStock);
+          if (p.inStock && v && !seen.has(p.slug)) { seen.add(p.slug); picks.push({ p, variantId: v.id }); }
+        }
+      }
+      if (!picks.length) return;
+      fbtItems = picks;
+      const total = product.priceCents + picks.reduce((s, x) => s + x.p.priceCents, 0);
+      el.innerHTML = `
+        <h3 class="fbt__title">Frequently bought together</h3>
+        <div class="fbt__row">
+          <div class="fbt__item"><img src="${product.image || ''}" alt="${escAttr(product.title)}"><span class="fbt__name">${esc(product.title)} <em>(this item)</em></span><span class="fbt__price">${money(product.priceCents)}</span></div>
+          ${picks.map((x, i) => `<span class="fbt__plus" aria-hidden="true">+</span>
+            <label class="fbt__item"><input type="checkbox" data-fbt-check="${i}" checked><a href="/product.html?slug=${encodeURIComponent(x.p.slug)}"><img src="${x.p.image || ''}" alt="${escAttr(x.p.title)}"></a><span class="fbt__name">${esc(x.p.title)}</span><span class="fbt__price">${money(x.p.priceCents)}</span></label>`).join('')}
+        </div>
+        <div class="fbt__foot">
+          <span class="fbt__total">Total: <b data-fbt-total>${money(total)}</b></span>
+          <button class="btn btn--sm" data-fbt-add>Add ${picks.length + 1} to cart</button>
+        </div>`;
+      el.hidden = false;
+      const recompute = () => {
+        let t = product.priceCents;
+        picks.forEach((x, i) => { if (el.querySelector(`[data-fbt-check="${i}"]`).checked) t += x.p.priceCents; });
+        el.querySelector('[data-fbt-total]').textContent = money(t);
+      };
+      el.querySelectorAll('[data-fbt-check]').forEach((c) => c.addEventListener('change', recompute));
+      el.querySelector('[data-fbt-add]').addEventListener('click', addFBT);
+    } catch (_) { /* non-fatal */ }
+  }
+  async function addFBT() {
+    const el = $('[data-fbt]');
+    const main = currentVariant();
+    const toAdd = [];
+    if (main && main.stock > 0) toAdd.push([main.id, product.title]);
+    fbtItems.forEach((x, i) => { if (el.querySelector(`[data-fbt-check="${i}"]`).checked) toAdd.push([x.variantId, x.p.title]); });
+    if (!toAdd.length) return Loom.toast('Select at least one item', 'error');
+    for (let i = 0; i < toAdd.length; i++) {
+      await Loom.addToCart(toAdd[i][0], 1, { label: toAdd[i][1], open: i === toAdd.length - 1 });
+    }
   }
 
   function wireGallery() {

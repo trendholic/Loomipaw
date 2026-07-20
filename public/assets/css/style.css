@@ -1425,3 +1425,38 @@ input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="
 @media (max-width: 560px) {
   .trust-row--checkout { flex-direction: column; gap: .55rem; }
 }
+
+/* =====================================================================
+   Revenue growth: PDP value prop, assurance, FAQ, frequently-bought,
+   and cart upsell (added in the revenue-growth pass)
+   ===================================================================== */
+.pdp__subtitle { font-family: var(--font-display); font-size: 1.15rem; line-height: 1.4; color: var(--espresso); margin: -.2rem 0 .3rem; font-style: italic; }
+.pdp__assurance { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; margin: .9rem 0 .2rem; font-size: .78rem; color: var(--ink-2); }
+.pdp__assurance span { display: inline-flex; align-items: center; gap: .4rem; }
+.pdp__assurance svg { width: 15px; height: 15px; stroke: var(--clay); flex: 0 0 auto; }
+
+.faq { margin: 0; }
+.faq dt { font-weight: 600; color: var(--espresso); margin-top: .8rem; }
+.faq dt:first-child { margin-top: 0; }
+.faq dd { margin: .25rem 0 0; color: var(--ink-2); font-size: .9rem; line-height: 1.55; }
+
+.fbt { margin: 1.4rem 0 .4rem; padding: 1.1rem; border: 1px solid var(--line); border-radius: 14px; background: var(--cream); }
+.fbt__title { font-family: var(--font-display); font-size: 1.05rem; margin: 0 0 .8rem; }
+.fbt__row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.fbt__item { display: flex; align-items: center; gap: .5rem; font-size: .82rem; }
+.fbt__item img { width: 46px; height: 46px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; }
+.fbt__item input { accent-color: var(--clay); }
+.fbt__name { max-width: 12rem; }
+.fbt__name em { color: var(--taupe); font-style: normal; }
+.fbt__price { font-weight: 600; white-space: nowrap; }
+.fbt__plus { color: var(--taupe); font-weight: 600; }
+.fbt__foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+.fbt__total { font-size: .92rem; }
+
+.cart-upsell { margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+.cart-upsell__head { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--taupe); margin-bottom: .7rem; }
+.cart-upsell__item { display: flex; align-items: center; gap: .7rem; }
+.cart-upsell__item img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
+.cart-upsell__info { flex: 1; min-width: 0; }
+.cart-upsell__name { font-size: .86rem; font-weight: 600; }
+.cart-upsell__price { font-size: .82rem; color: var(--ink-2); }

@@ -52,9 +52,41 @@
             <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Secure SSL checkout</span>
             <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg> 30-day returns</span>
           </div>
+          <div class="cart-upsell" data-cart-upsell hidden></div>
         </aside>
       </div>`;
     wire();
+    loadUpsell();
+  }
+
+  // "Complete the set": recommend one highly-rated item not already in the
+  // cart. Simple, honest AOV nudge — one-tap add, no dark patterns.
+  async function loadUpsell() {
+    const el = root.querySelector('[data-cart-upsell]');
+    if (!el) return;
+    const inCart = new Set(cart.items.map((i) => i.productSlug));
+    try {
+      const { products } = await API.products('sort=reviews&limit=8');
+      const pick = (products || []).find((p) => p.inStock && !inCart.has(p.slug) && (p.variants || []).some((v) => v.inStock));
+      if (!pick) return;
+      const variant = pick.variants.find((v) => v.inStock);
+      el.innerHTML = `
+        <div class="cart-upsell__head">Complete the set</div>
+        <div class="cart-upsell__item">
+          <a href="/product.html?slug=${encodeURIComponent(pick.slug)}"><img src="${pick.image || ''}" alt="${Loom.escapeAttr(pick.title)}"></a>
+          <div class="cart-upsell__info">
+            <div class="cart-upsell__name"><a href="/product.html?slug=${encodeURIComponent(pick.slug)}">${Loom.escapeHtml(pick.title)}</a></div>
+            <div class="cart-upsell__price">${money(pick.priceCents)} · ${pick.rating ? pick.rating.toFixed(1) : '—'}★</div>
+          </div>
+          <button class="btn btn--sm" data-upsell-add="${variant.id}" data-add-label="${Loom.escapeAttr(pick.title)}">Add</button>
+        </div>`;
+      el.hidden = false;
+      el.querySelector('[data-upsell-add]').addEventListener('click', async (e) => {
+        const id = Number(e.currentTarget.getAttribute('data-upsell-add'));
+        await Loom.addToCart(id, 1, { label: pick.title, open: false });
+        await load(); // re-render the page cart + summary with the new line
+      });
+    } catch (_) { /* non-fatal */ }
   }
 
   function lineHtml(l) {

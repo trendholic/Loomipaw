@@ -88,6 +88,17 @@ function productMeta(req, res, next) {
       { '@type': 'ListItem', position: p.categoryName ? 4 : 3, name: p.title, item: url },
     ],
   };
+  // FAQPage — mirrors the visible on-page FAQ (product.js faqHtml) so answers
+  // stay consistent. Eligible for FAQ rich results.
+  const faq = {
+    '@context': 'https://schema.org', '@type': 'FAQPage',
+    mainEntity: [
+      ['How do I choose the right size?', 'Measure your dog’s chest at its widest point and neck circumference, then match our size chart. Between sizes? We recommend sizing up. Free 30-day returns make exchanges easy.'],
+      ['When will my order arrive?', 'Orders ship within 1–2 business days. Shipping is complimentary and carbon-neutral on orders over $75.'],
+      ['What if it doesn’t fit or my dog doesn’t love it?', 'You’re covered by our 30-day happiness guarantee — return it for a full refund or exchange, no questions asked.'],
+      ['Are the materials safe for my dog?', 'Yes. We use OEKO-TEX® certified fabrics and hardware, tested to be safe on skin and gentle on the planet.'],
+    ].map(([q, aTxt]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: aTxt } })),
+  };
 
   const head = `
   <title>${htmlEscape(title)}</title>
@@ -106,6 +117,7 @@ function productMeta(req, res, next) {
   <meta name="twitter:image" content="${htmlEscape(image)}" />
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   <script type="application/ld+json">${JSON.stringify(breadcrumb)}</script>
+  <script type="application/ld+json">${JSON.stringify(faq)}</script>
 `;
 
   // Replace the default <title> and inject the meta block before </head>.
