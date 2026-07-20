@@ -11,11 +11,15 @@ const orders = require('../services/orders');
 const settings = require('../services/settings');
 const media = require('../lib/media');
 const mailer = require('../lib/mailer');
+const audit = require('../services/audit');
+const { toCsv } = require('../lib/csv');
 const { refreshRating } = require('./reviews');
 const logger = require('../lib/logger');
 
 const router = express.Router();
 router.use(requireAdmin);
+const money = (c) => (Number(c || 0) / 100).toFixed(2);
+const sendCsv = (res, name, csv) => res.type('text/csv').set('Content-Disposition', `attachment; filename="${name}"`).send(csv);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -342,6 +346,129 @@ router.patch('/messages/:id', validate({ body: z.object({ status: z.enum(['new',
   res.json({ ok: true });
 }));
 router.get('/newsletter', asyncHandler(async (req, res) => res.json({ subscribers: db.prepare('SELECT * FROM newsletter ORDER BY created_at DESC').all() })));
+
+/* =========================== ANALYTICS ============================ */
+router.get('/analytics', asyncHandler(async (req, res) => {
+  const paid = "status NOT IN ('pending','cancelled')";
+  // 30-day revenue + order series
+  const revenue = db.prepare(`SELECT substr(created_at,1,10) d, SUM(total_cents) c, COUNT(*) n
+    FROM orders WHERE ${paid} AND created_at >= datetime('now','-30 day') GROUP BY d ORDER BY d`).all();
+  // Customer growth (cumulative signups by day, 30d)
+  const signups = db.prepare(`SELECT substr(created_at,1,10) d, COUNT(*) n FROM users WHERE role='customer'
+    AND created_at >= datetime('now','-30 day') GROUP BY d ORDER BY d`).all();
+  const totalCustomers = db.prepare("SELECT COUNT(*) n FROM users WHERE role='customer'").get().n;
+  // Product performance
+  const products = db.prepare(`SELECT oi.title, SUM(oi.qty) units, SUM(oi.qty*oi.unit_price_cents) revenue,
+    COUNT(DISTINCT oi.order_id) orders FROM order_items oi JOIN orders o ON o.id=oi.order_id
+    WHERE o.${paid} GROUP BY oi.title ORDER BY revenue DESC LIMIT 10`).all();
+  // Conversion proxy: paid orders vs registered customers, repeat-rate
+  const buyers = db.prepare(`SELECT COUNT(DISTINCT user_id) n FROM orders WHERE ${paid} AND user_id IS NOT NULL`).get().n;
+  const repeat = db.prepare(`SELECT COUNT(*) n FROM (SELECT user_id FROM orders WHERE ${paid} AND user_id IS NOT NULL GROUP BY user_id HAVING COUNT(*) > 1)`).get().n;
+  // Status breakdown
+  const byStatus = db.prepare('SELECT status, COUNT(*) n FROM orders GROUP BY status').all();
+  res.json({
+    revenue, signups, totalCustomers, products, byStatus,
+    conversion: {
+      buyers,
+      repeatBuyers: repeat,
+      repeatRate: buyers ? Math.round(repeat / buyers * 100) : 0,
+      conversionRate: totalCustomers ? Math.round(buyers / totalCustomers * 100) : 0,
+    },
+  });
+}));
+
+/* ======================= LOW-STOCK ALERTS ========================= */
+router.get('/alerts', asyncHandler(async (req, res) => {
+  const lowStock = db.prepare(`SELECT v.id, v.sku, v.color, v.size, v.stock, v.low_stock_at, p.title, p.slug
+    FROM variants v JOIN products p ON p.id = v.product_id WHERE v.stock <= v.low_stock_at ORDER BY v.stock ASC LIMIT 50`).all();
+  res.json({ lowStock });
+}));
+
+/* ========================= ACTIVITY LOG =========================== */
+router.get('/activity', validate({ query: z.object({ action: z.string().optional(), page: z.coerce.number().int().min(1).optional() }) }),
+  asyncHandler(async (req, res) => {
+    const page = req.validated.query.page || 1; const limit = 60;
+    const rows = audit.list({ limit, offset: (page - 1) * limit, action: req.validated.query.action });
+    const total = db.prepare('SELECT COUNT(*) n FROM audit_log').get().n;
+    res.json({ activity: rows, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  }));
+
+/* ============================ EXPORTS ============================= */
+router.get('/export/orders.csv', asyncHandler(async (req, res) => {
+  const rows = db.prepare('SELECT * FROM orders ORDER BY created_at DESC').all();
+  const csv = toCsv(
+    ['Order', 'Date', 'Email', 'Status', 'Payment', 'Items', 'Subtotal', 'Discount', 'Shipping', 'Tax', 'Total', 'Currency', 'Coupon', 'Tracking'],
+    rows.map((o) => {
+      const items = db.prepare('SELECT SUM(qty) n FROM order_items WHERE order_id = ?').get(o.id).n || 0;
+      return [o.number, o.created_at, o.email, o.status, o.financial_status, items, money(o.subtotal_cents), money(o.discount_cents), money(o.shipping_cents), money(o.tax_cents), money(o.total_cents), o.currency, o.coupon_code, o.tracking_number];
+    })
+  );
+  sendCsv(res, 'orders.csv', csv);
+}));
+
+router.get('/export/products.csv', asyncHandler(async (req, res) => {
+  const rows = db.prepare(`SELECT p.*, c.name cat, (SELECT SUM(stock) FROM variants WHERE product_id=p.id) stock,
+    (SELECT COUNT(*) FROM variants WHERE product_id=p.id) variants FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.title`).all();
+  const csv = toCsv(
+    ['Title', 'Slug', 'Category', 'Price', 'CompareAt', 'Status', 'Tag', 'Featured', 'BestSeller', 'Variants', 'TotalStock', 'Rating', 'Reviews'],
+    rows.map((p) => [p.title, p.slug, p.cat || '', money(p.price_cents), p.compare_at_cents ? money(p.compare_at_cents) : '', p.status, p.tag, p.featured ? 'yes' : 'no', p.best_seller ? 'yes' : 'no', p.variants, p.stock || 0, p.rating_avg, p.rating_count])
+  );
+  sendCsv(res, 'products.csv', csv);
+}));
+
+router.get('/export/customers.csv', asyncHandler(async (req, res) => {
+  const rows = db.prepare(`SELECT u.email, u.name, u.created_at, u.last_login_at,
+    (SELECT COUNT(*) FROM orders o WHERE o.user_id=u.id) orders,
+    (SELECT COALESCE(SUM(total_cents),0) FROM orders o WHERE o.user_id=u.id AND o.status NOT IN ('pending','cancelled')) spent
+    FROM users u WHERE u.role='customer' ORDER BY u.created_at DESC`).all();
+  const csv = toCsv(['Email', 'Name', 'Joined', 'LastLogin', 'Orders', 'TotalSpent'],
+    rows.map((c) => [c.email, c.name, c.created_at, c.last_login_at || '', c.orders, money(c.spent)]));
+  sendCsv(res, 'customers.csv', csv);
+}));
+
+router.get('/export/inventory.csv', asyncHandler(async (req, res) => {
+  const rows = db.prepare(`SELECT p.title, v.sku, v.color, v.size, v.stock, v.low_stock_at
+    FROM variants v JOIN products p ON p.id=v.product_id ORDER BY p.title, v.position`).all();
+  const csv = toCsv(['Product', 'SKU', 'Color', 'Size', 'Stock', 'LowStockAt'],
+    rows.map((v) => [v.title, v.sku, v.color, v.size, v.stock, v.low_stock_at]));
+  sendCsv(res, 'inventory.csv', csv);
+}));
+
+/* ========================= BULK ACTIONS =========================== */
+const bulkOrders = db.transaction((numbers, status) => {
+  let n = 0;
+  for (const number of numbers) {
+    const o = orders.byNumber(number);
+    if (o) { orders.updateStatus(o, status); n++; }
+  }
+  return n;
+});
+router.patch('/bulk/orders', validate({ body: z.object({ numbers: z.array(z.string()).min(1).max(500), status: z.enum(orders.STATUS_FLOW) }) }),
+  asyncHandler(async (req, res) => {
+    const n = bulkOrders(req.body.numbers, req.body.status);
+    res.json({ ok: true, updated: n });
+  }));
+
+const bulkStock = db.transaction((items) => {
+  let n = 0;
+  for (const it of items) {
+    const v = db.prepare('SELECT stock FROM variants WHERE id = ?').get(it.id);
+    if (!v) continue;
+    db.prepare('UPDATE variants SET stock = ? WHERE id = ?').run(it.stock, it.id);
+    db.prepare('INSERT INTO inventory_log (variant_id, delta, reason, ref) VALUES (?, ?, ?, ?)').run(it.id, it.stock - v.stock, 'bulk adjustment', 'admin');
+    n++;
+  }
+  return n;
+});
+router.patch('/bulk/inventory', validate({ body: z.object({ items: z.array(z.object({ id: z.coerce.number().int(), stock: z.coerce.number().int().min(0) })).min(1).max(1000) }) }),
+  asyncHandler(async (req, res) => res.json({ ok: true, updated: bulkStock(req.body.items) })));
+
+router.patch('/bulk/products', validate({ body: z.object({ ids: z.array(z.coerce.number().int()).min(1).max(500), status: z.enum(['active', 'draft', 'archived']) }) }),
+  asyncHandler(async (req, res) => {
+    const stmt = db.prepare("UPDATE products SET status = ?, updated_at = datetime('now') WHERE id = ?");
+    const tx = db.transaction((ids) => { let n = 0; for (const id of ids) { if (stmt.run(req.body.status, id).changes) n++; } return n; });
+    res.json({ ok: true, updated: tx(req.body.ids) });
+  }));
 
 /* ============================== SETTINGS =========================== */
 router.get('/settings', asyncHandler(async (req, res) => res.json({ settings: settings.all() })));

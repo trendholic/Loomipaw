@@ -151,3 +151,8 @@ table.data tbody tr:hover { background: #faf8f4; }
   .menu-toggle { display: inline-flex; }
   .form-row { grid-template-columns: 1fr; }
 }
+
+/* Bulk action bar */
+.bulk-bar { display: flex; align-items: center; gap: .8rem; padding: .8rem 1.25rem; background: var(--sidebar-2); color: #fff; }
+.bulk-bar span { font-weight: 600; font-size: .84rem; }
+.bulk-bar select { padding: .4rem .7rem; border-radius: 6px; border: 1px solid rgba(255,255,255,.2); background: #2f281f; color: #fff; }

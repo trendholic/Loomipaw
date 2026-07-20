@@ -60,6 +60,7 @@
   /* ---------------------------------------------------- Shell --------- */
   const NAV = [
     ['dashboard', 'Dashboard', '<path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 13h7v8H3z"/>'],
+    ['analytics', 'Analytics', '<path d="M3 3v18h18M7 15l3-4 3 3 5-7"/>'],
     ['orders', 'Orders', '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/>'],
     ['products', 'Products', '<path d="M20 7 12 3 4 7v10l8 4 8-4zM4 7l8 4 8-4M12 11v10"/>'],
     ['inventory', 'Inventory', '<path d="M3 4h18v4H3zM5 8v12h14V8M9 12h6"/>'],
@@ -68,6 +69,7 @@
     ['coupons', 'Discounts', '<path d="M9 9h.01M15 15h.01M20 12a2 2 0 0 1 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4a2 2 0 0 1 0 4v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 1-2-2zM15 9l-6 6"/>'],
     ['reviews', 'Reviews', '<path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/>'],
     ['messages', 'Messages', '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'],
+    ['activity', 'Activity Log', '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'],
     ['settings', 'Settings', '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 7 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 14H4a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 5.4 7.6l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 11 4.6V4a2 2 0 1 1 4 0v.09c.66.26 1.4.11 1.9-.4l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'],
   ];
   function renderShell() {
@@ -126,7 +128,7 @@
     const [name, param] = hash.split('/');
     document.getElementById('sidebar')?.classList.remove('is-open');
     setActive(name);
-    const routes = { dashboard: vDashboard, orders: vOrders, order: vOrderDetail, products: vProducts, inventory: vInventory, categories: vCategories, customers: vCustomers, customer: vCustomerDetail, coupons: vCoupons, reviews: vReviews, messages: vMessages, settings: vSettings };
+    const routes = { dashboard: vDashboard, analytics: vAnalytics, orders: vOrders, order: vOrderDetail, products: vProducts, inventory: vInventory, categories: vCategories, customers: vCustomers, customer: vCustomerDetail, coupons: vCoupons, reviews: vReviews, messages: vMessages, activity: vActivity, settings: vSettings };
     const fn = routes[name] || vDashboard;
     setTitle((NAV.find((n) => n[0] === name) || [, name[0].toUpperCase() + name.slice(1)])[1]);
     view().innerHTML = '<div class="empty">Loading…</div>';
@@ -158,6 +160,46 @@
       </div>`;
   }
 
+  /* ---------------------------------------------------- Analytics ----- */
+  function barChart(series, valFn, labelFn) {
+    const max = Math.max(1, ...series.map(valFn));
+    if (!series.length) return '<div class="empty">No data in this window yet.</div>';
+    return `<div class="chart">${series.map((s) => `<div class="chart__bar" style="height:${Math.round(valFn(s) / max * 100)}%" title="${esc(labelFn(s))}"><span>${esc((s.d || '').slice(5))}</span></div>`).join('')}</div><div style="height:1.5rem"></div>`;
+  }
+  async function vAnalytics() {
+    const a = await API.get(admin('/analytics'));
+    // cumulative customer growth
+    let cum = 0; const growth = a.signups.map((s) => ({ d: s.d, c: (cum += s.n) }));
+    view().innerHTML = `
+      <div class="cards">
+        <div class="stat"><div class="stat__label">Total customers</div><div class="stat__value">${a.totalCustomers}</div></div>
+        <div class="stat"><div class="stat__label">Conversion (buyers/customers)</div><div class="stat__value">${a.conversion.conversionRate}%</div><div class="stat__sub">${a.conversion.buyers} have purchased</div></div>
+        <div class="stat"><div class="stat__label">Repeat-purchase rate</div><div class="stat__value">${a.conversion.repeatRate}%</div><div class="stat__sub">${a.conversion.repeatBuyers} repeat buyers</div></div>
+        <div class="stat"><div class="stat__label">Orders (30d)</div><div class="stat__value">${a.revenue.reduce((n, r) => n + r.n, 0)}</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel"><div class="panel__head"><h2>Revenue — 30 days</h2></div><div class="panel__body">${barChart(a.revenue, (s) => s.c, (s) => fmtDate(s.d) + ': ' + money(s.c))}</div></div>
+        <div class="panel"><div class="panel__head"><h2>Customer growth (cumulative)</h2></div><div class="panel__body">${barChart(growth, (s) => s.c, (s) => fmtDate(s.d) + ': ' + s.c + ' customers')}</div></div>
+      </div>
+      <div class="panel"><div class="panel__head"><h2>Product performance</h2><a class="btn btn--ghost btn--sm" href="/api/admin/export/products.csv" download>Export CSV</a></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Product</th><th>Units sold</th><th>Orders</th><th style="text-align:right">Revenue</th></tr></thead>
+        <tbody>${a.products.length ? a.products.map((p) => `<tr><td class="cell-strong">${esc(p.title)}</td><td>${p.units}</td><td class="cell-muted">${p.orders}</td><td style="text-align:right">${money(p.revenue)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">No sales yet.</td></tr>'}</tbody></table></div>
+      </div>`;
+  }
+
+  /* ---------------------------------------------------- Activity ------ */
+  async function vActivity() {
+    const { activity, pagination } = await API.get(admin('/activity'));
+    view().innerHTML = `
+      <div class="panel"><div class="panel__head"><h2>Activity log <span class="cell-muted">(${pagination.total} events)</span></h2></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>IP</th></tr></thead>
+        <tbody>${activity.length ? activity.map((e) => `<tr>
+          <td class="cell-muted">${fmtDateTime(e.created_at)}</td><td>${esc(e.actor_email || 'system')}</td>
+          <td><span class="badge ${e.action.includes('failure') || e.action.includes('locked') ? 'badge--bad' : e.action.startsWith('admin') ? 'badge--info' : 'badge--muted'}">${esc(e.action)}</span></td>
+          <td class="cell-muted">${esc(e.entity || '')}</td><td class="cell-muted">${esc(e.ip || '')}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No activity recorded.</td></tr>'}</tbody></table></div>
+      </div>`;
+  }
+
   /* ---------------------------------------------------- Orders -------- */
   async function vOrders() {
     const status = sessionStorage.getItem('adminOrderFilter') || 'all';
@@ -166,15 +208,46 @@
     view().innerHTML = `
       <div class="panel">
         <div class="panel__head"><h2>Orders</h2>
-          <select class="form-field" data-order-filter style="width:auto;padding:.5rem .8rem;border:1px solid var(--line);border-radius:8px">${statuses.map((s) => `<option value="${s}" ${s === status ? 'selected' : ''}>${s[0].toUpperCase() + s.slice(1)}</option>`).join('')}</select>
+          <div style="display:flex;gap:.6rem;align-items:center">
+            <select class="form-field" data-order-filter style="width:auto;padding:.5rem .8rem;border:1px solid var(--line);border-radius:8px">${statuses.map((s) => `<option value="${s}" ${s === status ? 'selected' : ''}>${s[0].toUpperCase() + s.slice(1)}</option>`).join('')}</select>
+            <a class="btn btn--ghost btn--sm" href="/api/admin/export/orders.csv" download>Export CSV</a>
+          </div>
         </div>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Status</th><th>Payment</th><th>Date</th><th style="text-align:right">Total</th></tr></thead>
-        <tbody>${orders.length ? orders.map((o) => `<tr style="cursor:pointer" data-href="#order/${o.number}">
+        <div class="bulk-bar" data-bulk-bar hidden>
+          <span data-bulk-count>0 selected</span>
+          <select data-bulk-status>${['processing', 'fulfilled', 'shipped', 'delivered', 'cancelled', 'refunded'].map((s) => `<option value="${s}">${s}</option>`).join('')}</select>
+          <button class="btn btn--sm" data-bulk-apply>Apply to selected</button>
+        </div>
+        <div class="table-wrap"><table class="data"><thead><tr><th style="width:36px"><input type="checkbox" data-check-all aria-label="Select all"></th><th>Order</th><th>Customer</th><th>Items</th><th>Status</th><th>Payment</th><th>Date</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>${orders.length ? orders.map((o) => `<tr data-href="#order/${o.number}">
+          <td><input type="checkbox" data-row-check value="${o.number}" aria-label="Select ${o.number}"></td>
           <td class="cell-strong">${o.number}</td><td>${esc(o.email)}</td><td class="cell-muted">${o.items.length}</td>
           <td><span class="badge status-${o.status}">${o.status}</span></td><td><span class="badge status-${o.financial_status}">${o.financial_status}</span></td>
-          <td class="cell-muted">${fmtDate(o.created_at)}</td><td style="text-align:right">${money(o.total_cents, o.currency)}</td></tr>`).join('') : '<tr><td colspan="7" class="empty">No orders.</td></tr>'}</tbody></table></div>
+          <td class="cell-muted">${fmtDate(o.created_at)}</td><td style="text-align:right">${money(o.total_cents, o.currency)}</td></tr>`).join('') : '<tr><td colspan="8" class="empty">No orders.</td></tr>'}</tbody></table></div>
       </div>`;
     document.querySelector('[data-order-filter]').addEventListener('change', (e) => { sessionStorage.setItem('adminOrderFilter', e.target.value); route(); });
+    wireBulk('#order/');
+  }
+
+  // Reusable bulk-selection wiring for tables with [data-row-check].
+  function wireBulk() {
+    const bar = view().querySelector('[data-bulk-bar]');
+    const all = view().querySelector('[data-check-all]');
+    const boxes = () => [...view().querySelectorAll('[data-row-check]')];
+    const selected = () => boxes().filter((b) => b.checked).map((b) => b.value);
+    const refresh = () => { const n = selected().length; if (bar) { bar.hidden = n === 0; view().querySelector('[data-bulk-count]').textContent = `${n} selected`; } };
+    if (all) all.addEventListener('change', () => { boxes().forEach((b) => { b.checked = all.checked; }); refresh(); });
+    boxes().forEach((b) => b.addEventListener('change', refresh));
+    // Prevent row navigation when clicking a checkbox cell.
+    boxes().forEach((b) => b.addEventListener('click', (e) => e.stopPropagation()));
+    const apply = view().querySelector('[data-bulk-apply]');
+    if (apply) apply.addEventListener('click', async () => {
+      const numbers = selected(); if (!numbers.length) return;
+      const st = view().querySelector('[data-bulk-status]').value;
+      if (!confirm(`Set ${numbers.length} order(s) to "${st}"? Customers will be notified.`)) return;
+      try { const r = await API.patch(admin('/bulk/orders'), { numbers, status: st }); toast(`Updated ${r.updated} order(s)`); refreshCounts(); route(); }
+      catch (e) { toast(e.message, 'error'); }
+    });
   }
 
   async function vOrderDetail(number) {
@@ -237,7 +310,7 @@
     const { products } = await API.get(admin('/products'));
     view().innerHTML = `
       <div class="panel">
-        <div class="panel__head"><h2>Products (${products.length})</h2><button class="btn" data-new-product>+ New product</button></div>
+        <div class="panel__head"><h2>Products (${products.length})</h2><div style="display:flex;gap:.6rem"><a class="btn btn--ghost btn--sm" href="/api/admin/export/products.csv" download>Export CSV</a><button class="btn" data-new-product>+ New product</button></div></div>
         <div class="table-wrap"><table class="data"><thead><tr><th></th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr></thead>
         <tbody>${products.map((p) => `<tr>
           <td><img class="thumb" src="${p.image || ''}" alt=""></td>
@@ -363,7 +436,7 @@
   async function vInventory() {
     const { inventory } = await API.get(admin('/inventory'));
     view().innerHTML = `
-      <div class="panel"><div class="panel__head"><h2>Inventory (${inventory.length} variants)</h2><span class="cell-muted">Rows in red are at or below their low-stock threshold</span></div>
+      <div class="panel"><div class="panel__head"><h2>Inventory (${inventory.length} variants)</h2><div style="display:flex;gap:.6rem;align-items:center"><span class="cell-muted">Red = at/below low-stock threshold</span><a class="btn btn--ghost btn--sm" href="/api/admin/export/inventory.csv" download>Export CSV</a></div></div>
         <div class="table-wrap"><table class="data"><thead><tr><th>Product</th><th>Variant</th><th>SKU</th><th>Stock</th><th></th></tr></thead>
         <tbody>${inventory.map((v) => `<tr>
           <td class="cell-strong">${esc(v.title)}</td><td class="cell-muted">${esc([v.color, v.size].filter(Boolean).join(' · '))}</td><td class="cell-muted">${esc(v.sku)}</td>
@@ -410,7 +483,7 @@
   async function vCustomers() {
     const { customers } = await API.get(admin('/customers'));
     view().innerHTML = `
-      <div class="panel"><div class="panel__head"><h2>Customers (${customers.length})</h2></div>
+      <div class="panel"><div class="panel__head"><h2>Customers (${customers.length})</h2><a class="btn btn--ghost btn--sm" href="/api/admin/export/customers.csv" download>Export CSV</a></div>
         <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Email</th><th>Orders</th><th>Spent</th><th>Joined</th></tr></thead>
         <tbody>${customers.length ? customers.map((c) => `<tr style="cursor:pointer" data-href="#customer/${c.id}"><td class="cell-strong">${esc(c.name || '—')}</td><td>${esc(c.email)}</td><td>${c.orders}</td><td>${money(c.spent)}</td><td class="cell-muted">${fmtDate(c.created_at)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No customers yet.</td></tr>'}</tbody></table></div>
       </div>`;
