@@ -170,6 +170,16 @@ test('ADMIN: export data (orders + products CSV)', async () => {
   assert.equal(p.status, 200);
 });
 
+test('ADMIN: inventory history is readable', async () => {
+  const h = await api('GET', '/api/admin/inventory/history?limit=50');
+  assert.equal(h.status, 200);
+  assert.ok(Array.isArray(h.data.history) && h.data.history.length > 0, 'has movements');
+  // Every movement carries a signed delta, a reason and a timestamp.
+  const row = h.data.history[0];
+  assert.ok('delta' in row && row.reason && row.created_at);
+  assert.ok(h.data.history.some((r) => ['order', 'cancel', 'adjustment', 'restock'].includes(r.reason)), 'movement reasons present');
+});
+
 test('ADMIN: analytics + activity feed', async () => {
   const a = await api('GET', '/api/admin/analytics');
   assert.ok(a.data.conversion);

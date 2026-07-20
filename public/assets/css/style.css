@@ -1460,3 +1460,13 @@ input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="
 .cart-upsell__info { flex: 1; min-width: 0; }
 .cart-upsell__name { font-size: .86rem; font-weight: 600; }
 .cart-upsell__price { font-size: .82rem; color: var(--ink-2); }
+
+/* Frequently-bought-together stacks cleanly on phones (no cramped rows). */
+@media (max-width: 560px) {
+  .fbt__row { flex-direction: column; align-items: stretch; }
+  .fbt__item { width: 100%; }
+  .fbt__name { max-width: none; flex: 1; min-width: 0; }
+  .fbt__price { margin-left: auto; }
+  .fbt__plus { display: none; }
+  .fbt__foot [data-fbt-add], .fbt__foot .btn { width: 100%; }
+}

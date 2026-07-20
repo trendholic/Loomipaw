@@ -235,6 +235,23 @@ router.patch('/inventory/:variantId', validate({ body: z.object({ stock: z.coerc
     res.json({ ok: true, stock: req.body.stock });
   }));
 
+// Inventory movement history (already recorded for orders, cancels/refunds and
+// manual/bulk adjustments) — surface it so stock changes are auditable.
+router.get('/inventory/history',
+  validate({ query: z.object({ variantId: z.coerce.number().int().optional(), limit: z.coerce.number().int().min(1).max(200).optional() }) }),
+  asyncHandler(async (req, res) => {
+    const { variantId, limit } = req.validated.query;
+    const rows = db.prepare(`SELECT l.id, l.variant_id, l.delta, l.reason, l.ref, l.created_at,
+                                    v.sku, v.color, v.size, p.title, p.slug
+                             FROM inventory_log l
+                             JOIN variants v ON v.id = l.variant_id
+                             JOIN products p ON p.id = v.product_id
+                             ${variantId ? 'WHERE l.variant_id = @variantId' : ''}
+                             ORDER BY l.id DESC LIMIT @limit`)
+      .all({ variantId, limit: limit || 100 });
+    res.json({ history: rows });
+  }));
+
 /* ============================== ORDERS ============================= */
 router.get('/orders', asyncHandler(async (req, res) => {
   const status = req.query.status;
