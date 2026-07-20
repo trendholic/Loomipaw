@@ -94,6 +94,11 @@ const restock = db.transaction((orderId) => {
   }
 });
 
+// Latest successful payment ref for an order (for refunds/webhooks).
+function latestPayment(orderId) {
+  return db.prepare("SELECT * FROM payments WHERE order_id = ? ORDER BY id DESC LIMIT 1").get(orderId);
+}
+
 function recordPayment(orderId, { provider, ref, amountCents, currency, status, raw }) {
   q.insertPayment.run({
     order_id: orderId, provider, provider_ref: ref || '', amount_cents: amountCents,
@@ -137,7 +142,7 @@ function withItems(order) {
 }
 
 module.exports = {
-  createPendingOrder, recordPayment, markPaid, markFailed, updateStatus, restock,
+  createPendingOrder, recordPayment, markPaid, markFailed, updateStatus, restock, latestPayment,
   withItems, byNumber: (n) => q.orderByNumber.get(n), byId: (id) => q.orderById.get(id),
   STATUS_FLOW,
 };

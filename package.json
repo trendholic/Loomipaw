@@ -12,9 +12,12 @@
     "seed": "node server/db/seed.js",
     "setup": "node server/db/migrate.js && node server/db/seed.js",
     "test:api": "node server/test/e2e.js",
-    "test": "node --test server/test/unit.test.js server/test/security.test.js",
+    "test": "node --test server/test/unit.test.js server/test/security.test.js server/test/flow.test.js",
     "test:unit": "node --test server/test/unit.test.js",
-    "test:security": "node --test server/test/security.test.js"
+    "test:security": "node --test server/test/security.test.js",
+    "test:flow": "node --test server/test/flow.test.js",
+    "coverage": "c8 --reporter=text --reporter=text-summary --reporter=html --reporter=lcov node --test server/test/unit.test.js server/test/security.test.js server/test/flow.test.js",
+    "coverage:check": "c8 --check-coverage node --test server/test/unit.test.js server/test/security.test.js server/test/flow.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -34,5 +37,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "c8": "^12.0.0"
   }
 }

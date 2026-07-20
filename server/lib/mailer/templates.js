@@ -89,6 +89,15 @@ function orderStatus(order) {
     <div style="margin-top:8px">${btn(config.appUrl + '/account/order.html?number=' + encodeURIComponent(order.number), 'Track your order')}</div>`);
 }
 
+function adminNewOrder(order) {
+  const s = order.shipping || {};
+  return shell(`${h('New order received 🎉')}
+    ${p(`Order <strong>${order.number}</strong> · ${money.format(order.total_cents, order.currency)} · ${(order.items || []).reduce((n, i) => n + i.qty, 0)} item(s)`)}
+    ${p(`Customer: ${escapeHtml(s.name || '')} &lt;${escapeHtml(order.email)}&gt;`)}
+    <table style="width:100%;border-collapse:collapse;margin:8px 0 4px">${orderRows(order)}</table>
+    <div style="margin-top:16px">${btn(config.appUrl + '/admin#order/' + encodeURIComponent(order.number), 'Open in admin')}</div>`);
+}
+
 function contactAdmin(msg) {
   return shell(`${h('New contact message')}
     ${p(`<strong>${escapeHtml(msg.name)}</strong> &lt;${escapeHtml(msg.email)}&gt;`)}
@@ -101,4 +110,4 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-module.exports = { welcome, passwordReset, orderConfirmation, orderStatus, contactAdmin };
+module.exports = { welcome, passwordReset, orderConfirmation, orderStatus, contactAdmin, adminNewOrder };

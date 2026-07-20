@@ -52,6 +52,10 @@ function createApp() {
     next();
   });
 
+  // --- Payment webhooks (raw body, signature-verified, CSRF-exempt) ---
+  // Mounted BEFORE the JSON parser so the raw bytes reach signature checks.
+  app.use('/api/webhooks', express.raw({ type: '*/*', limit: '1mb' }), require('./routes/webhooks'));
+
   // --- Parsers ---
   app.use(express.json({ limit: '512kb' }));
   app.use(express.urlencoded({ extended: true, limit: '512kb' }));

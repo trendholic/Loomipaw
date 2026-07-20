@@ -19,8 +19,9 @@ const config = require('../../config');
 const settings = require('../../services/settings');
 const dev = require('./dev');
 const stripe = require('./stripe');
+const paypal = require('./paypal');
 
-const providers = { dev, stripe };
+const providers = { dev, stripe, paypal };
 
 function active() {
   const name = (settings.get('payments')?.provider || config.payments.provider || 'dev').toLowerCase();
@@ -36,4 +37,5 @@ module.exports = {
   confirmPayment: (args) => active().confirmPayment(args),
   refund: (args) => active().refund(args),
   active,
+  byName: (name) => providers[name] || null,
 };

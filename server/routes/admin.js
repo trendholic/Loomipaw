@@ -265,6 +265,31 @@ router.patch('/orders/:number', validate({ body: z.object({ status: z.enum(order
     res.json({ order: orders.withItems(orders.byId(o.id)) });
   }));
 
+/* ============================== REFUNDS =========================== */
+// Issue a refund through the active payment provider, then mark the order
+// refunded (which also restocks). Safe for the dev provider (simulated).
+router.post('/orders/:number/refund', asyncHandler(async (req, res) => {
+  const order = orders.byNumber(req.params.number);
+  if (!order) throw new HttpError(404, 'Order not found');
+  if (order.status === 'refunded') throw new HttpError(409, 'Order is already refunded');
+  if (order.financial_status !== 'paid') throw new HttpError(409, 'Only paid orders can be refunded');
+
+  const payments = require('../lib/payments');
+  const last = orders.latestPayment(order.id);
+  const provider = payments.byName(order.payment_provider) || payments.active();
+  let result;
+  try {
+    result = await provider.refund({ ref: order.payment_ref || last?.provider_ref, amountCents: order.total_cents, currency: order.currency });
+  } catch (e) {
+    throw new HttpError(502, `Refund failed at gateway: ${e.message}`);
+  }
+  orders.recordPayment(order.id, { provider: provider.name, ref: result.ref, amountCents: -order.total_cents, currency: order.currency, status: 'refunded', raw: result.raw });
+  const updated = orders.updateStatus(order, 'refunded');
+  mailer.sendOrderStatus(orders.withItems(updated)).catch((e) => logger.warn('refund email failed', { e: e.message }));
+  audit.log(req, 'order.refund', `order:${order.number}`, { amountCents: order.total_cents });
+  res.json({ ok: true, order: orders.withItems(orders.byId(order.id)) });
+}));
+
 /* ============================= CUSTOMERS =========================== */
 router.get('/customers', asyncHandler(async (req, res) => {
   const rows = db.prepare(`SELECT u.id, u.email, u.name, u.role, u.created_at,

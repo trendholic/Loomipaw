@@ -281,6 +281,7 @@
             <div class="form-field"><label>Tracking number</label><input data-tracking value="${esc(order.tracking_number || '')}" placeholder="Carrier tracking #"></div>
             <div class="form-field"><label>Internal notes</label><textarea data-notes>${esc(order.notes || '')}</textarea></div>
             <button class="btn" data-save-order>Save &amp; notify customer</button>
+            ${order.financial_status === 'paid' && order.status !== 'refunded' ? '<button class="btn btn--danger" data-refund style="margin-top:.6rem;width:100%;justify-content:center">Refund order</button>' : ''}
           </div></div>
           <div class="panel"><div class="panel__head"><h2>Customer</h2></div><div class="panel__body">
             <p class="cell-strong">${esc(s.name || '')}</p><p class="cell-muted">${esc(order.email)}</p>
@@ -299,6 +300,13 @@
         });
         toast('Order updated'); refreshCounts(); route();
       } catch (err) { toast(err.message, 'error'); e.target.disabled = false; }
+    });
+    const refundBtn = document.querySelector('[data-refund]');
+    if (refundBtn) refundBtn.addEventListener('click', async () => {
+      if (!confirm(`Refund order ${order.number} in full? This restocks the items and notifies the customer.`)) return;
+      refundBtn.disabled = true; refundBtn.textContent = 'Refunding…';
+      try { await API.post(admin('/orders/' + encodeURIComponent(order.number) + '/refund'), {}); toast('Order refunded'); route(); }
+      catch (err) { toast(err.message, 'error'); refundBtn.disabled = false; refundBtn.textContent = 'Refund order'; }
     });
   }
 
@@ -627,7 +635,7 @@
       </div></div>
 
       <div class="panel"><div class="panel__head"><h2>Payments</h2></div><div class="panel__body">
-        <div class="form-field" style="max-width:320px"><label>Active provider</label><select data-s="payments.provider"><option value="dev" ${pay.provider === 'dev' ? 'selected' : ''}>Development (simulated)</option><option value="stripe" ${pay.provider === 'stripe' ? 'selected' : ''}>Stripe</option></select></div>
+        <div class="form-field" style="max-width:320px"><label>Active provider</label><select data-s="payments.provider"><option value="dev" ${pay.provider === 'dev' ? 'selected' : ''}>Development (simulated)</option><option value="stripe" ${pay.provider === 'stripe' ? 'selected' : ''}>Stripe</option><option value="paypal" ${pay.provider === 'paypal' ? 'selected' : ''}>PayPal</option></select></div>
         <p class="hint">Stripe requires STRIPE_SECRET_KEY in your environment. See <code>server/lib/payments/stripe.js</code>. The checkout flow is unchanged when you switch providers.</p>
         <button class="btn" data-save="payments" style="margin-top:1rem">Save payments</button>
       </div></div>`;

@@ -89,6 +89,7 @@ router.post('/', writeLimiter,
 
       const full = orders.withItems(paid);
       mailer.sendOrderConfirmation(full).catch((e) => logger.warn('order email failed', { e: e.message }));
+      mailer.sendAdminNewOrder(full).catch((e) => logger.warn('admin order email failed', { e: e.message }));
 
       res.status(201).json({
         ok: true,

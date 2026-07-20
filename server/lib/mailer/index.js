@@ -69,5 +69,6 @@ module.exports = {
   sendPasswordReset: (user, url) => send({ to: user.email, subject: 'Reset your Loomipaw password', html: templates.passwordReset(user, url) }),
   sendOrderConfirmation: (order) => send({ to: order.email, subject: `Your Loomipaw order ${order.number} is confirmed`, html: templates.orderConfirmation(order) }),
   sendOrderStatus: (order) => send({ to: order.email, subject: `Update on your Loomipaw order ${order.number}`, html: templates.orderStatus(order) }),
+  sendAdminNewOrder: (order) => send({ to: config.store.email, subject: `New order ${order.number} — ${(order.total_cents / 100).toFixed(2)} ${order.currency}`, html: templates.adminNewOrder(order) }),
   sendContactReceipt: (msg) => send({ to: config.store.email, subject: `New contact message: ${msg.subject || 'No subject'}`, html: templates.contactAdmin(msg) }),
 };
