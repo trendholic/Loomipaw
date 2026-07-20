@@ -1,0 +1,43 @@
+# =====================================================================
+# Loomipaw — production compose
+#   docker compose up -d --build
+# Persistent data (SQLite DB, uploads, logs) lives in named volumes.
+# =====================================================================
+services:
+  app:
+    build: .
+    image: loomipaw:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+    volumes:
+      - loomipaw_data:/app/data       # SQLite database
+      - loomipaw_uploads:/app/uploads # product images
+      - loomipaw_var:/app/var         # logs + dev mail
+    # Expose only to the reverse proxy / localhost, not the public internet.
+    ports:
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 4s
+      retries: 3
+      start_period: 15s
+
+  # Optional: nginx TLS-terminating reverse proxy.
+  # Uncomment and provide certs + deploy/nginx.conf to enable.
+  # proxy:
+  #   image: nginx:1.27-alpine
+  #   restart: unless-stopped
+  #   depends_on: [app]
+  #   ports: ["80:80", "443:443"]
+  #   volumes:
+  #     - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./deploy/certs:/etc/nginx/certs:ro
+
+volumes:
+  loomipaw_data:
+  loomipaw_uploads:
+  loomipaw_var:

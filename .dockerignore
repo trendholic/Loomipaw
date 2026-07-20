@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+coverage
+data
+uploads
+var
+.env
+*.md
+!README.md
+scratchpad
+.vscode
+.idea
+Dockerfile
+docker-compose.yml
