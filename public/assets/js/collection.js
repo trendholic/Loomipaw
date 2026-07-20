@@ -1,62 +1,58 @@
-/* =====================================================================
-   LOOMIPAW — Collection page (filter + sort)
-   ===================================================================== */
+/* Collection page — server-side filtering, sorting, pagination. */
 (function () {
-  "use strict";
-  const LP = window.LOOMIPAW;
-  const products = window.LOOMIPAW_PRODUCTS || [];
-  if (!LP) return;
+  'use strict';
+  const API = window.LoomAPI;
+  const $ = (s) => document.querySelector(s);
+  const grid = $('[data-collection]');
+  const countEl = $('[data-count]');
+  const filterWrap = $('[data-filters]');
+  const sortSel = $('[data-sort]');
+  if (!grid) return;
 
-  const grid = document.querySelector("[data-collection]");
-  const countEl = document.querySelector("[data-count]");
-  const filterWrap = document.querySelector("[data-filters]");
-  const sortSel = document.querySelector("[data-sort]");
+  let activeFilter = 'all';
+  let activeSort = 'featured';
 
-  let activeFilter = "all";
-  let activeSort = "featured";
-
-  // Support deep-link ?category=Walking
   const params = new URLSearchParams(location.search);
-  if (params.get("category")) {
-    const c = params.get("category");
-    const chip = filterWrap && filterWrap.querySelector(`[data-filter="${c}"]`);
-    if (chip) { activeFilter = c; setActiveChip(chip); }
+  if (params.get('category')) activeFilter = params.get('category');
+
+  async function loadCategories() {
+    if (!filterWrap) return;
+    try {
+      const { categories } = await API.categories();
+      const chips = ['<button class="filter-chip" data-filter="all">All</button>']
+        .concat(categories.map((c) => `<button class="filter-chip" data-filter="${c.slug}">${Loom.escapeHtml(c.name)}</button>`));
+      filterWrap.innerHTML = chips.join('');
+      setActive();
+    } catch (_) {}
+  }
+  function setActive() {
+    filterWrap && filterWrap.querySelectorAll('.filter-chip').forEach((b) => b.setAttribute('aria-pressed', b.getAttribute('data-filter') === activeFilter ? 'true' : 'false'));
   }
 
-  function setActiveChip(chip) {
-    filterWrap.querySelectorAll(".filter-chip").forEach((b) => b.setAttribute("aria-pressed", "false"));
-    chip.setAttribute("aria-pressed", "true");
+  async function apply() {
+    grid.setAttribute('aria-busy', 'true');
+    const qs = new URLSearchParams();
+    if (activeFilter && activeFilter !== 'all') qs.set('category', activeFilter);
+    qs.set('sort', activeSort);
+    qs.set('limit', '48');
+    try {
+      const { products, pagination } = await API.products(qs.toString());
+      if (!products.length) grid.innerHTML = '<div class="empty-state">No pieces in this collection yet — check back soon.</div>';
+      else Loom.mountProducts(grid, products);
+      if (countEl) countEl.textContent = `${pagination.total} ${pagination.total === 1 ? 'piece' : 'pieces'}`;
+      Loom.syncWishButtons(); Loom.initReveal();
+    } catch (e) {
+      grid.innerHTML = `<div class="empty-state">Couldn’t load products. ${Loom.escapeHtml(e.message)}</div>`;
+    } finally { grid.removeAttribute('aria-busy'); }
   }
 
-  function apply() {
-    let list = products.filter((p) => activeFilter === "all" || p.category === activeFilter);
-    switch (activeSort) {
-      case "price-asc": list = list.slice().sort((a, b) => a.price - b.price); break;
-      case "price-desc": list = list.slice().sort((a, b) => b.price - a.price); break;
-      case "rating": list = list.slice().sort((a, b) => b.rating - a.rating); break;
-      case "reviews": list = list.slice().sort((a, b) => b.reviews - a.reviews); break;
-      default: list = list.slice().sort((a, b) => (b.bestSeller === true) - (a.bestSeller === true));
-    }
-    if (!list.length) {
-      grid.innerHTML = '<div class="empty-state">No pieces in this collection yet — check back soon.</div>';
-    } else {
-      LP.mountProducts(grid, list);
-    }
-    if (countEl) countEl.textContent = `${list.length} ${list.length === 1 ? "piece" : "pieces"}`;
-    LP.syncWishButtons();
-    LP.initReveal();
-  }
+  if (filterWrap) filterWrap.addEventListener('click', (e) => {
+    const chip = e.target.closest('.filter-chip'); if (!chip) return;
+    activeFilter = chip.getAttribute('data-filter'); setActive();
+    const u = new URL(location); if (activeFilter === 'all') u.searchParams.delete('category'); else u.searchParams.set('category', activeFilter);
+    history.replaceState({}, '', u); apply();
+  });
+  if (sortSel) sortSel.addEventListener('change', () => { activeSort = sortSel.value; apply(); });
 
-  if (filterWrap) {
-    filterWrap.addEventListener("click", (e) => {
-      const chip = e.target.closest(".filter-chip");
-      if (!chip) return;
-      activeFilter = chip.getAttribute("data-filter");
-      setActiveChip(chip);
-      apply();
-    });
-  }
-  if (sortSel) sortSel.addEventListener("change", () => { activeSort = sortSel.value; apply(); });
-
-  apply();
+  loadCategories().then(apply);
 })();

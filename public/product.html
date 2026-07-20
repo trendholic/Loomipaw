@@ -34,8 +34,8 @@
           <li><a class="nav__link" href="index.html#story">Our Story</a></li>
         </ul>
         <div class="nav__actions">
-          <button class="icon-btn icon-btn--search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
-          <a class="icon-btn" href="#" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></a>
+          <button class="icon-btn icon-btn--search" data-search-open aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+          <a class="icon-btn" data-account-link href="/account/login.html" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></a>
           <button class="icon-btn" aria-label="Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor"><path d="M12 20s-7-4.5-9.5-9C.5 7 3 3.5 6.5 3.5 9 3.5 12 6 12 6s3-2.5 5.5-2.5C21 3.5 23.5 7 21.5 11 19 15.5 12 20 12 20z"/></svg><span class="icon-btn__badge" data-wishlist-badge hidden>0</span></button>
           <button class="icon-btn" aria-label="Open cart" data-cart-open><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><span class="icon-btn__badge" data-cart-badge hidden>0</span></button>
         </div>
@@ -56,148 +56,26 @@
   </div>
 
   <main id="main">
-    <section class="pdp">
-      <div class="container">
-        <p class="breadcrumb"><a href="index.html">Home</a> / <a href="collection.html">Shop</a> / <span data-pdp-crumb>Product</span></p>
-        <div class="pdp__grid">
-          <!-- Gallery -->
-          <div class="pdp__gallery">
-            <div class="pdp__main"><img data-pdp-main src="" alt="" fetchpriority="high" /></div>
-            <div class="pdp__thumbs" data-pdp-thumbs></div>
-          </div>
-
-          <!-- Info -->
-          <div class="pdp__info">
-            <p class="pdp__cat" data-pdp-cat></p>
-            <h1 class="pdp__title" data-pdp-title></h1>
-            <div class="pdp__meta">
-              <span class="stars" aria-hidden="true">★★★★★</span>
-              <a href="#reviews" data-pdp-reviews></a>
-            </div>
-            <div class="pdp__price" data-pdp-price></div>
-            <p class="pdp__desc" data-pdp-desc></p>
-
-            <div class="opt">
-              <div class="opt__label">Colour — <span data-pdp-color-name></span></div>
-              <div class="opt__colors" data-pdp-colors></div>
-            </div>
-
-            <div class="opt">
-              <div class="opt__label">Size <span><a href="#" style="text-decoration:underline">Size guide</a></span></div>
-              <div class="opt__sizes" data-pdp-sizes></div>
-            </div>
-
-            <div class="pdp__buy">
-              <div class="qty-stepper">
-                <button aria-label="Decrease quantity" data-pdp-qty="-1">−</button>
-                <span data-pdp-qty-val>1</span>
-                <button aria-label="Increase quantity" data-pdp-qty="1">+</button>
-              </div>
-              <button class="btn" data-pdp-add>Add to Cart — <span data-pdp-add-price></span></button>
-            </div>
-
-            <div class="pdp__wish-line" role="button" tabindex="0" data-pdp-wish>
-              <svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M12 20s-7-4.5-9.5-9C.5 7 3 3.5 6.5 3.5 9 3.5 12 6 12 6s3-2.5 5.5-2.5C21 3.5 23.5 7 21.5 11 19 15.5 12 20 12 20z"/></svg>
-              <span data-pdp-wish-label>Save to wishlist</span>
-            </div>
-
-            <div class="pdp__usps">
-              <div class="pdp__usp"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M3 7h13v10H3z"/><path d="M16 10h4l1 3v4h-5"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><span><b>Free carbon-neutral shipping</b>on orders over $75</span></div>
-              <div class="pdp__usp"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v6h6"/></svg><span><b>30-day happiness guarantee</b>Free returns, no questions asked</span></div>
-              <div class="pdp__usp"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg><span><b>OEKO-TEX® certified materials</b>Safe on skin, gentle on the planet</span></div>
-            </div>
-
-            <div class="accordion" data-accordion>
-              <div class="accordion__item">
-                <button class="accordion__btn" aria-expanded="false"><span>Details &amp; Materials</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button>
-                <div class="accordion__panel"><div class="accordion__panel-inner">Crafted from responsibly sourced, OEKO-TEX® certified fabrics with reinforced stitching and corrosion-resistant hardware. Designed in-house and comfort-tested by real dogs across nine size grades.</div></div>
-              </div>
-              <div class="accordion__item">
-                <button class="accordion__btn" aria-expanded="false"><span>Sizing &amp; Fit</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button>
-                <div class="accordion__panel"><div class="accordion__panel-inner">Measure your dog's chest at its widest point and neck circumference. Between sizes? We recommend sizing up. Adjustable points ensure a secure, comfortable fit for every breed.</div></div>
-              </div>
-              <div class="accordion__item">
-                <button class="accordion__btn" aria-expanded="false"><span>Shipping &amp; Returns</span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></button>
-                <div class="accordion__panel"><div class="accordion__panel-inner">Ships within 1–2 business days. Complimentary carbon-neutral shipping on orders over $75. Enjoy a 30-day happiness guarantee with free, easy returns.</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <section class="pdp" data-pdp>
+      <div class="container"><div class="pdp-loading" aria-busy="true">Loading product…</div></div>
     </section>
 
-    <!-- Reviews -->
-    <section class="section pdp-reviews" id="reviews" aria-labelledby="pdp-reviews-title">
-      <div class="container">
-        <div class="section-head">
-          <div class="section-head__text">
-            <p class="eyebrow" data-reveal>Verified Reviews</p>
-            <h2 id="pdp-reviews-title" data-reveal style="--reveal-delay:.06s">What the pack is saying.</h2>
-          </div>
-        </div>
-        <div class="pdp-reviews__summary" data-reveal>
-          <div class="pdp-reviews__score" data-pdp-score>4.9</div>
-          <div class="pdp-reviews__bars">
-            <div class="pdp-reviews__bar"><span>5★</span><div class="pdp-reviews__bar-track"><div class="pdp-reviews__bar-fill" style="width:88%"></div></div><span>88%</span></div>
-            <div class="pdp-reviews__bar"><span>4★</span><div class="pdp-reviews__bar-track"><div class="pdp-reviews__bar-fill" style="width:9%"></div></div><span>9%</span></div>
-            <div class="pdp-reviews__bar"><span>3★</span><div class="pdp-reviews__bar-track"><div class="pdp-reviews__bar-fill" style="width:2%"></div></div><span>2%</span></div>
-            <div class="pdp-reviews__bar"><span>2★</span><div class="pdp-reviews__bar-track"><div class="pdp-reviews__bar-fill" style="width:1%"></div></div><span>1%</span></div>
-            <div class="pdp-reviews__bar"><span>1★</span><div class="pdp-reviews__bar-track"><div class="pdp-reviews__bar-fill" style="width:0%"></div></div><span>0%</span></div>
-          </div>
-        </div>
-        <div class="review-list">
-          <article class="review-tile" data-reveal>
-            <div class="review-tile__stars" aria-hidden="true">★★★★★</div>
-            <p class="review-tile__title">Exceptional quality</p>
-            <p class="review-tile__body">"You can feel the craftsmanship immediately. My dog is comfortable and I get stopped on every walk to ask where it's from."</p>
-            <p class="review-tile__author">Amara T. · Verified Buyer</p>
-          </article>
-          <article class="review-tile" data-reveal style="--reveal-delay:.08s">
-            <div class="review-tile__stars" aria-hidden="true">★★★★★</div>
-            <p class="review-tile__title">Worth every penny</p>
-            <p class="review-tile__body">"I've bought cheaper before and replaced them within weeks. This is on another level — beautiful and built to last."</p>
-            <p class="review-tile__author">Ethan M. · Verified Buyer</p>
-          </article>
-          <article class="review-tile" data-reveal>
-            <div class="review-tile__stars" aria-hidden="true">★★★★★</div>
-            <p class="review-tile__title">Perfect fit</p>
-            <p class="review-tile__body">"The sizing guide was spot on. Secure, comfortable and my pup actually seems to love wearing it."</p>
-            <p class="review-tile__author">Priya S. · Verified Buyer</p>
-          </article>
-          <article class="review-tile" data-reveal style="--reveal-delay:.08s">
-            <div class="review-tile__stars" aria-hidden="true">★★★★☆</div>
-            <p class="review-tile__title">Beautiful, runs slightly small</p>
-            <p class="review-tile__body">"Gorgeous piece and lovely materials. I'd recommend sizing up if your dog is between sizes — otherwise flawless."</p>
-            <p class="review-tile__author">Marco D. · Verified Buyer</p>
-          </article>
-        </div>
-      </div>
-    </section>
+    <section class="section pdp-reviews" id="reviews" data-reviews></section>
 
-    <!-- Recommendations -->
     <section class="section" aria-labelledby="recs-title">
       <div class="container">
         <div class="section-head">
-          <div class="section-head__text">
-            <p class="eyebrow" data-reveal>Complete the Look</p>
-            <h2 id="recs-title" data-reveal style="--reveal-delay:.06s">You may also love.</h2>
-          </div>
-          <a class="link-underline" href="collection.html">View all <span class="btn__arrow" aria-hidden="true">→</span></a>
+          <div class="section-head__text"><p class="eyebrow" data-reveal>Complete the Look</p><h2 id="recs-title" data-reveal>You may also love.</h2></div>
+          <a class="link-underline" href="/collection.html">View all <span class="btn__arrow" aria-hidden="true">→</span></a>
         </div>
-        <div class="products-grid" data-pdp-recs></div>
+        <div class="products-grid" data-recs></div>
       </div>
     </section>
 
-    <!-- Recently viewed -->
     <section class="section" data-recent-section hidden aria-labelledby="recent-title">
       <div class="container">
-        <div class="section-head">
-          <div class="section-head__text">
-            <p class="eyebrow">Recently Viewed</p>
-            <h2 id="recent-title">Pick up where you left off.</h2>
-          </div>
-        </div>
-        <div class="products-grid" data-pdp-recent></div>
+        <div class="section-head"><div class="section-head__text"><p class="eyebrow">Recently Viewed</p><h2 id="recent-title">Pick up where you left off.</h2></div></div>
+        <div class="products-grid" data-recent></div>
       </div>
     </section>
   </main>
@@ -250,7 +128,7 @@
   </aside>
   <div class="toast" data-toast aria-live="polite"></div>
 
-  <script src="assets/js/products.js"></script>
+  <script src="assets/js/api.js" defer></script>
   <script src="assets/js/main.js" defer></script>
   <script src="assets/js/product.js" defer></script>
 </body>
