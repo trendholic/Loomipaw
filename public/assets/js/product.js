@@ -90,6 +90,10 @@
               <svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M12 20s-7-4.5-9.5-9C.5 7 3 3.5 6.5 3.5 9 3.5 12 6 12 6s3-2.5 5.5-2.5C21 3.5 23.5 7 21.5 11 19 15.5 12 20 12 20z"/></svg>
               <span data-wish-label>Save to wishlist</span>
             </div>
+            <div class="pdp__share">
+              <button type="button" data-compare="${product.slug}"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 6h13M3 12h13M3 18h13M18 8l3 3-3 3"/></svg> Compare</button>
+              <button type="button" data-share data-share-title="${escAttr(product.title)}"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg> Share</button>
+            </div>
 
             <div class="pdp__usps">
               <div class="pdp__usp"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M3 7h13v10H3z"/><path d="M16 10h4l1 3v4h-5"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><span><b>Free carbon-neutral shipping</b>on orders over $75</span></div>

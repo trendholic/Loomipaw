@@ -9,6 +9,8 @@
     return document.cookie.split('; ').find((c) => c.startsWith(name + '='))?.split('=')[1];
   }
 
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   async function request(method, path, body, opts = {}) {
     const headers = { Accept: 'application/json' };
     if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
@@ -16,12 +18,27 @@
       const csrf = getCookie('lp_csrf');
       if (csrf) headers['x-csrf-token'] = decodeURIComponent(csrf);
     }
-    const res = await fetch('/api' + path, {
-      method,
-      headers,
-      credentials: 'same-origin',
+    const init = {
+      method, headers, credentials: 'same-origin',
       body: body === undefined ? undefined : (body instanceof FormData ? body : JSON.stringify(body)),
-    });
+    };
+
+    // Retry transient network failures + 502/503/504 (GET only — never
+    // replay a non-idempotent mutation and risk a double submit).
+    const maxRetries = method === 'GET' ? 2 : 0;
+    let attempt = 0, res;
+    while (true) {
+      try {
+        res = await fetch('/api' + path, init);
+      } catch (netErr) {
+        if (attempt++ < maxRetries) { await sleep(300 * attempt); continue; }
+        const e = new Error('Network error. Please check your connection and try again.');
+        e.status = 0; e.network = true; throw e;
+      }
+      if ([502, 503, 504].includes(res.status) && attempt++ < maxRetries) { await sleep(300 * attempt); continue; }
+      break;
+    }
+
     let data = null;
     try { data = await res.json(); } catch (_) { /* empty body */ }
     if (!res.ok) {

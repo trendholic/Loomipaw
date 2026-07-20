@@ -24,7 +24,7 @@
         <form data-register-form>
           <div class="field"><label for="r-name">Name</label><input id="r-name" name="name" required autocomplete="name"></div>
           <div class="field"><label for="r-email">Email</label><input id="r-email" name="email" type="email" required autocomplete="email"></div>
-          <div class="field"><label for="r-password">Password</label><input id="r-password" name="password" type="password" required minlength="8" autocomplete="new-password"><span class="field__error" data-pw-hint>At least 8 characters.</span></div>
+          <div class="field"><label for="r-password">Password</label><input id="r-password" name="password" type="password" required minlength="10" autocomplete="new-password" aria-describedby="pw-hint"><span class="field__error" id="pw-hint" data-pw-hint>At least 10 characters, mixing letters, numbers &amp; symbols.</span></div>
           <button class="btn btn--block" type="submit">Create account</button>
         </form>
         <p class="form-note">Already have an account? <a href="/account/login.html">Log in</a></p>
