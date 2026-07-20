@@ -110,4 +110,8 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-module.exports = { welcome, passwordReset, orderConfirmation, orderStatus, contactAdmin, adminNewOrder };
+module.exports = {
+  welcome, passwordReset, orderConfirmation, orderStatus, contactAdmin, adminNewOrder,
+  // Shared building blocks (reused by marketingTemplates.js).
+  shell, btn, h, p, escapeHtml, BRAND, CLAY, CREAM, INK2,
+};
