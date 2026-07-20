@@ -4,11 +4,15 @@ const createApp = require('./app');
 const config = require('./config');
 const logger = require('./lib/logger');
 const migrate = require('./db/migrate');
+const validateEnv = require('./lib/validateEnv');
 
 // Ensure runtime directories exist.
 for (const dir of [config.paths.data, config.paths.uploads, config.paths.logs, config.paths.mail]) {
   fs.mkdirSync(dir, { recursive: true });
 }
+
+// Fail fast on insecure production configuration; warn in development.
+validateEnv();
 
 // Apply migrations on boot (idempotent).
 migrate();

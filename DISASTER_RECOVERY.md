@@ -19,6 +19,34 @@ Back those up and you can rebuild anywhere in minutes.
 `BACKUP_DIR`) and keeps the newest `BACKUP_KEEP` (default 14). **Copy the
 backups off-box** (S3/rsync) — a backup on the same disk is not a backup.
 
+> ✅ **Verified in this build:** a full `backup → restore` round-trip was run
+> against the live database; the restored copy passed `PRAGMA integrity_check`
+> (`ok`) with all rows intact.
+
+### Automated daily backup (cron)
+
+```cron
+# /etc/cron.d/loomipaw-backup  — daily 03:00, keep 30, log output
+0 3 * * *  deploy  cd /opt/loomipaw && BACKUP_DIR=/var/backups/loomipaw BACKUP_KEEP=30 /usr/bin/node scripts/backup.js >> var/logs/backup.log 2>&1
+```
+
+With Docker (backs up inside the container to a mounted volume):
+```cron
+0 3 * * *  root  docker compose -f /opt/loomipaw/docker-compose.yml exec -T app node scripts/backup.js >> /var/log/loomipaw-backup.log 2>&1
+```
+
+### Off-server copy (do this — same-disk backups don't survive host loss)
+
+```bash
+# S3 (versioned bucket recommended)
+aws s3 sync /var/backups/loomipaw s3://your-bucket/loomipaw/ --storage-class STANDARD_IA
+
+# or rsync to another host
+rsync -az --delete /var/backups/loomipaw/ backup-host:/backups/loomipaw/
+```
+Append either line to the cron job after `backup.js`, or run it on its own
+schedule. Keep at least one copy in a **different region/provider**.
+
 ---
 
 ## Recovery procedures
@@ -38,7 +66,9 @@ curl -s localhost:4000/api/health
 ```
 
 The current DB is moved aside to `*.pre-restore` before replacing, so a bad
-restore is itself reversible.
+restore is itself reversible. `restore.js` **refuses to run while the app is
+responding** on `/api/health` (probe-based, reliable); pass `--force` only if
+you are certain the app is stopped.
 
 ### B. Full rebuild from scratch (host lost)
 

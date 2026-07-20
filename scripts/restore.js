@@ -17,11 +17,19 @@ const [dbBackup, uploadsBackup] = process.argv.slice(2);
 if (!dbBackup) { console.error('Usage: node scripts/restore.js <db-backup> [uploads-backup.tar.gz]'); process.exit(1); }
 if (!fs.existsSync(dbBackup)) { console.error('DB backup not found:', dbBackup); process.exit(1); }
 
-// Safety: refuse to run if the server appears to be up.
-try {
-  require('child_process').execSync("pgrep -f 'server/index.js' >/dev/null 2>&1");
-  console.error('✗ The app appears to be running. Stop it before restoring.'); process.exit(1);
-} catch { /* not running — good */ }
+// Safety: refuse to run if the server is up (probe the health endpoint —
+// reliable and free of the pgrep self-match problem). Skip with --force.
+async function assertStopped() {
+  if (process.argv.includes('--force')) return;
+  const port = process.env.PORT || 4000;
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1500) });
+    if (res.ok) { console.error(`✗ The app is responding on port ${port}. Stop it before restoring (or pass --force).`); process.exit(1); }
+  } catch { /* not reachable — good, proceed */ }
+}
+
+(async () => {
+await assertStopped();
 
 // 1) Move current DB aside, then copy the backup into place.
 for (const suffix of ['', '-wal', '-shm']) {
@@ -39,3 +47,4 @@ if (uploadsBackup) {
 }
 
 console.log('Done. Start the app and verify: npm start');
+})();

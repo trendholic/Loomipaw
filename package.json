@@ -19,7 +19,8 @@
     "coverage": "c8 --reporter=text --reporter=text-summary --reporter=html --reporter=lcov node --test server/test/unit.test.js server/test/security.test.js server/test/flow.test.js",
     "coverage:check": "c8 --check-coverage node --test server/test/unit.test.js server/test/security.test.js server/test/flow.test.js",
     "db:backup": "node scripts/backup.js",
-    "db:restore": "node scripts/restore.js"
+    "db:restore": "node scripts/restore.js",
+    "test:email": "node scripts/test-email.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
